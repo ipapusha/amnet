@@ -1,0 +1,1 @@
+# defines useful expressions as AMNs, like max, min, etc
