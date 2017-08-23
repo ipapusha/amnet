@@ -139,3 +139,33 @@ def select(phi, k):
         np.zeros(1)
     )
 
+################################################################################
+
+# various methods for stacking
+def _stack_var_var(v1, v2):
+    assert isinstance(v1, Variable) and \
+           isinstance(v2, Variable)
+
+    # if variable is the same, replicate it
+    if v1.name == v2.name:
+        assert v1.outdim == v2.outdim
+        return AffineTransformation(
+            np.concatenate((np.eye(v1.outdim), np.eye(v2.outdim)), axis=0),
+            v1,
+            np.zeros(v1.outdim + v2.outdim)
+        )
+
+    # if variable is not the same, create new variable
+    return Variable(
+        outdim=v1.outdim + v2.outdim,
+        name='<' + v1.name + ':' + v2.name + '>'
+    )
+
+def _stack_aff_aff(aff1, aff2):
+    assert isinstance(aff1, AffineTransformation) and \
+           isinstance(aff2, AffineTransformation)
+
+    (m1,n1) = (aff1.outdim, aff1.indim)
+    (m2,n2) = (aff2.outdim, aff2.indim)
+    w = np.bmat([[aff1.w, np.zeros((m1, n2))],
+                 [np.zeros((m2, n1)), aff2.w]])

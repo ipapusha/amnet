@@ -4,7 +4,7 @@ import amnet
 
 def main():
     x = amnet.Variable(2, name='x')
-    phimax = amnet.atoms.Max2(x)
+    phimax = amnet.atoms.max2(x)
 
     print phimax
 
