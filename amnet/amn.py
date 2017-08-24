@@ -1,6 +1,10 @@
 import numpy as np
 
 
+################################################################################
+# main AMN classes
+################################################################################
+
 class Amn(object):
     def __init__(self, outdim=0, indim=0):
         self.outdim = outdim
@@ -73,9 +77,10 @@ class Mu(Amn):
             return self.y.eval(inp)
 
 ################################################################################
+# various methods for composing
+################################################################################
 
-# convenience methods
-def compose_affine(aff, phi):
+def _compose_aff_phi(aff, phi):
     """ returns aff(phi) """
     assert isinstance(aff, AffineTransformation)
     assert phi.outdim == aff.indim
@@ -86,7 +91,7 @@ def compose_affine(aff, phi):
     )
 
 
-def compose_affine_simp(aff1, aff2):
+def _compose_aff_aff_simp(aff1, aff2):
     """ returns aff1(aff2), simplified into one affine expression """
     assert isinstance(aff1, AffineTransformation)
     assert isinstance(aff2, AffineTransformation)
@@ -97,6 +102,25 @@ def compose_affine_simp(aff1, aff2):
         np.dot(aff1.w, aff2.b) + aff1.b
     )
 
+def compose(phi1, phi2):
+    """ returns phi1(phi2) """
+    if isinstance(phi1, Variable):
+        return phi2
+    elif isinstance(phi1, AffineTransformation):
+        return _compose_aff_phi(phi1, phi2)
+    elif isinstance(phi1, Mu):
+        return Mu(
+            compose(phi2.x, phi2),
+            compose(phi2.y, phi2),
+            compose(phi2.z, phi2),
+        )
+
+    assert False
+
+
+################################################################################
+# convenience methods for simplification
+################################################################################
 
 def simplify(phi):
     assert isinstance(phi, Variable) or \
@@ -121,13 +145,13 @@ def simplify(phi):
 
     if isinstance(alpha.x, Mu):
         return Mu(
-            simplify(compose_affine(alpha, (alpha.x).x)),
-            simplify(compose_affine(alpha, (alpha.x).y)),
+            simplify(_compose_aff_phi(alpha, (alpha.x).x)),
+            simplify(_compose_aff_phi(alpha, (alpha.x).y)),
             simplify((alpha.x).z)
         )
 
     assert isinstance(alpha.x, AffineTransformation)
-    return simplify(compose_affine_simp(alpha, alpha.x))
+    return simplify(_compose_aff_aff_simp(alpha, alpha.x))
 
 
 def select(phi, k):
@@ -139,14 +163,23 @@ def select(phi, k):
         np.zeros(1)
     )
 
+def wrap_identity(phi):
+    """returns phi, wrapped in an identity affine transformation"""
+    return AffineTransformation(
+        np.eye(phi.outdim, phi.outdim),
+        phi,
+        np.zeros(phi.outdim)
+    )
+
+################################################################################
+# various methods for stacking
 ################################################################################
 
-# various methods for stacking
 def _stack_var_var(v1, v2):
     assert isinstance(v1, Variable) and \
            isinstance(v2, Variable)
 
-    # if variable is the same, replicate it
+    # if variable is the same, replicate it with an affine transformation
     if v1.name == v2.name:
         assert v1.outdim == v2.outdim
         return AffineTransformation(
@@ -155,17 +188,89 @@ def _stack_var_var(v1, v2):
             np.zeros(v1.outdim + v2.outdim)
         )
 
-    # if variable is not the same, create new variable
+    # if variable is not the same, create a new variable
     return Variable(
         outdim=v1.outdim + v2.outdim,
         name='<' + v1.name + ':' + v2.name + '>'
     )
 
+
 def _stack_aff_aff(aff1, aff2):
     assert isinstance(aff1, AffineTransformation) and \
            isinstance(aff2, AffineTransformation)
 
-    (m1,n1) = (aff1.outdim, aff1.indim)
-    (m2,n2) = (aff2.outdim, aff2.indim)
+    (m1, n1) = (aff1.outdim, aff1.indim)
+    (m2, n2) = (aff2.outdim, aff2.indim)
     w = np.bmat([[aff1.w, np.zeros((m1, n2))],
                  [np.zeros((m2, n1)), aff2.w]])
+    b = np.concatenate((aff1.b, aff2.b), axis=0)
+    return AffineTransformation(
+        w,
+        stack(aff1.x, aff2.x),
+        b
+    )
+
+
+def _stack_aff_mu(aff, mu):
+    assert isinstance(aff, AffineTransformation) and \
+           isinstance(mu, Mu)
+    return Mu(
+        stack(aff, mu.x),
+        stack(aff, mu.y),
+        mu.z
+    )
+
+
+def _stack_mu_aff(mu, aff):
+    assert isinstance(aff, AffineTransformation) and \
+           isinstance(mu, Mu)
+    return Mu(
+        stack(mu.x, aff),
+        stack(mu.y, aff),
+        mu.z
+    )
+
+def _stack_mu_mu(mu1, mu2):
+    assert isinstance(mu1, Mu) and \
+           isinstance(mu2, Mu)
+
+    return Mu(
+        Mu(
+            stack(mu1.x, mu2.x),
+            stack(mu1.y, mu2.x),
+            mu1.z
+        ),
+        Mu(
+            stack(mu1.x, mu2.y),
+            stack(mu1.y, mu2.y),
+            mu1.z
+        ),
+        mu2.z
+    )
+
+
+def stack(phi1, phi2):
+    if isinstance(phi1, Variable):
+        if isinstance(phi2, Variable):
+            # base case
+            return _stack_var_var(phi1, phi2)
+        elif isinstance(phi2, AffineTransformation):
+            return _stack_aff_aff(wrap_identity(phi1), phi2)
+        elif isinstance(phi2, Mu):
+            return _stack_aff_mu(wrap_identity(phi1), phi2)
+    elif isinstance(phi1, AffineTransformation):
+        if isinstance(phi2, Variable):
+            return _stack_aff_aff(phi1, wrap_identity(phi2))
+        elif isinstance(phi2, AffineTransformation):
+            return _stack_aff_aff(phi1, phi2)
+        elif isinstance(phi2, Mu):
+            return _stack_aff_mu(phi1, phi2)
+    elif isinstance(phi1, Mu):
+        if isinstance(phi2, Variable):
+            return _stack_mu_aff(phi1, wrap_identity(phi2))
+        elif isinstance(phi2, AffineTransformation):
+            return _stack_mu_aff(phi1, phi2)
+        elif isinstance(phi2, Mu):
+            return _stack_mu_mu(phi1, phi2)
+
+    assert False

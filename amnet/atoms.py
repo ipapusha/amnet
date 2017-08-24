@@ -12,12 +12,7 @@ def constant(b, invar):
     )
 
 
-def max1(phi):
-    assert phi.outdim == 1
-    return phi
-
-
-def max2(phi):
+def max2_s(phi):
     assert phi.outdim == 2
 
     a1 = amnet.AffineTransformation(
@@ -39,10 +34,15 @@ def max2(phi):
     return amnet.Mu(a1, a2, a3)
 
 
-def maxn(phi):
-    assert phi.outdim >= 2
+def max2(phi1, phi2):
+    assert phi1.outdim == 1 and \
+           phi2.outdim == 1
 
-    if phi.outdim == 2:
-        return Max2(phi)
+    return max2_s(amnet.stack(phi1, phi2))
 
-    return NotImplemented
+
+def _foldl(f, z, xs):
+    if len(xs) == 0:
+        return z
+    return _foldl(f, f(z, xs[0]), xs[1:])
+
