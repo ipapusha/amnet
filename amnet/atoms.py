@@ -6,7 +6,7 @@ def constant(b, invar):
     outdim = len(b)
     indim = invar.outdim
     return amnet.AffineTransformation(
-        np.zeros(outdim, indim),
+        np.zeros((outdim, indim)),
         invar,
         b
     )
