@@ -4,9 +4,9 @@ import amnet
 
 def make_vgc(alpha):
     # inputs
-    e_var    = amnet.Variable(1, name='e')
+    e_var = amnet.Variable(1, name='e')
     edot_var = amnet.Variable(1, name='edot')
-    x    = amnet.stack(e_var, edot_var)
+    x = amnet.stack(e_var, edot_var)
 
     # affine transformations
     zero1 = amnet.atoms.constant(np.zeros(1), x)
@@ -16,27 +16,17 @@ def make_vgc(alpha):
     edot  = amnet.AffineTransformation(np.array([[0, 1]]), x, np.zeros(1))
     neg_edot = amnet.AffineTransformation(np.array([[0, -1]]), x, np.zeros(1))
 
-    # multiplexing units
-    w = amnet.Mu(
-        zero1,
-        amnet.Mu(
+    return amnet.atoms.make_or(
+        amnet.atoms.make_or(
             zero1,
             ae,
-            e
+            neg_e,
+            neg_edot
         ),
+        ae,
+        e,
         edot
     )
-    phi_vgc = amnet.Mu(
-        w,
-        amnet.Mu(
-            w,
-            ae,
-            neg_e
-        ),
-        neg_edot
-    )
-    return phi_vgc
-
 
 
 def true_vgc(e, edot, alpha):

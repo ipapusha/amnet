@@ -2,6 +2,74 @@ import numpy as np
 import amnet
 
 
+# gates from Table 2
+def make_and(x, y, z1, z2):
+    assert z1.outdim == 1
+    assert z2.outdim == 1
+    assert x.outdim == y.outdim
+
+    return amnet.Mu(
+        amnet.Mu(
+            x,
+            y,
+            z1,
+        ),
+        y,
+        z2
+    )
+
+
+def make_or(x, y, z1, z2):
+    assert z1.outdim == 1
+    assert z2.outdim == 1
+    assert x.outdim == y.outdim
+
+    return amnet.Mu(
+        x,
+        amnet.Mu(
+            x,
+            y,
+            z1
+        ),
+        z2
+    )
+
+
+def make_not(x, y, z):
+    assert z.outdim == 1
+    assert x.outdim == y.outdim
+
+    return amnet.Mu(
+        y,
+        z,
+        x
+    )
+
+
+def make_xor(x, y, z1, z2):
+    assert z1.outdim == 1
+    assert z2.outdim == 1
+    assert x.outdim == y.outdim
+
+    return amnet.Mu(
+        amnet.Mu(
+            y,
+            x,
+            z1
+        ),
+        amnet.Mu(
+            x,
+            y,
+            z1
+        ),
+        z2
+    )
+
+
+
+################################################################################
+# untested methods
+
 def constant(b, invar):
     outdim = len(b)
     indim = invar.outdim
