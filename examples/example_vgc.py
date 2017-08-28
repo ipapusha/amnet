@@ -9,7 +9,7 @@ def make_vgc(alpha):
     x = amnet.stack(e_var, edot_var)
 
     # affine transformations
-    zero1 = amnet.atoms.constant(np.zeros(1), x)
+    zero1 = amnet.atoms.make_const(np.zeros(1), x)
     ae    = amnet.AffineTransformation(np.array([[alpha, 0]]), x, np.zeros(1))
     e     = amnet.AffineTransformation(np.array([[1, 0]]), x, np.zeros(1))
     neg_e = amnet.AffineTransformation(np.array([[-1, 0]]), x, np.zeros(1))

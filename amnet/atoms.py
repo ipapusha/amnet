@@ -2,12 +2,40 @@ import numpy as np
 import amnet
 
 
-# gates from Table 2
-def make_and(x, y, z1, z2):
-    assert z1.outdim == 1
-    assert z2.outdim == 1
-    assert x.outdim == y.outdim
+################################################################################
+# utility methods
+################################################################################
 
+def _dimsok_mu(x, y, z):
+    return (x.outdim == y.outdim) and \
+           (z.outdim == 1)
+
+
+def _dimsok_gate(x, y, z1, z2):
+    return (x.outdim == y.outdim) and \
+           (z1.outdim == 1) and \
+           (z2.outdim == 1)
+
+
+################################################################################
+# simple affine transformations
+################################################################################
+
+def make_neg(x):
+    assert x.outdim >= 1
+    return amnet.AffineTransformation(
+        np.diag(-np.ones(x.outdim)),
+        x,
+        np.zeros(x.outdim)
+    )
+
+
+################################################################################
+# Gates from Table 2
+################################################################################
+
+def make_and(x, y, z1, z2):
+    assert _dimsok_gate(x, y, z1, z2)
     return amnet.Mu(
         amnet.Mu(
             x,
@@ -20,10 +48,7 @@ def make_and(x, y, z1, z2):
 
 
 def make_or(x, y, z1, z2):
-    assert z1.outdim == 1
-    assert z2.outdim == 1
-    assert x.outdim == y.outdim
-
+    assert _dimsok_gate(x, y, z1, z2)
     return amnet.Mu(
         x,
         amnet.Mu(
@@ -36,9 +61,7 @@ def make_or(x, y, z1, z2):
 
 
 def make_not(x, y, z):
-    assert z.outdim == 1
-    assert x.outdim == y.outdim
-
+    assert _dimsok_mu(x, y, z)
     return amnet.Mu(
         y,
         z,
@@ -47,10 +70,7 @@ def make_not(x, y, z):
 
 
 def make_xor(x, y, z1, z2):
-    assert z1.outdim == 1
-    assert z2.outdim == 1
-    assert x.outdim == y.outdim
-
+    assert _dimsok_gate(x, y, z1, z2)
     return amnet.Mu(
         amnet.Mu(
             y,
@@ -66,11 +86,70 @@ def make_xor(x, y, z1, z2):
     )
 
 
+################################################################################
+# Comparisons from Table 2
+################################################################################
+
+def make_le(x, y, z):
+    assert _dimsok_mu(x, y, z)
+    return amnet.Mu(
+        x,
+        y,
+        z
+    )
+
+
+def make_ge(x, y, z):
+    assert _dimsok_mu(x, y, z)
+    return amnet.Mu(
+        x,
+        y,
+        make_neg(z)
+    )
+
+
+def make_lt(x, y, z):
+    assert _dimsok_mu(x, y, z)
+    return make_not(
+        x,
+        y,
+        make_neg(z)
+    )
+
+
+def make_gt(x, y, z):
+    assert _dimsok_mu(x, y, z)
+    return make_not(
+        x,
+        y,
+        z
+    )
+
+
+def make_eq(x, y, z):
+    assert _dimsok_mu(x, y, z)
+    return make_and(
+        x,
+        y,
+        z,
+        make_neg(z)
+    )
+
+
+def make_neq(x, y, z):
+    assert _dimsok_mu(x, y, z)
+    return make_and(
+        y,
+        x,
+        z,
+        make_neg(z)
+    )
+
 
 ################################################################################
 # untested methods
 
-def constant(b, invar):
+def make_const(b, invar):
     outdim = len(b)
     indim = invar.outdim
     return amnet.AffineTransformation(
@@ -80,7 +159,7 @@ def constant(b, invar):
     )
 
 
-def max2_s(phi):
+def make_max2_s(phi):
     assert phi.outdim == 2
 
     a1 = amnet.AffineTransformation(
@@ -102,11 +181,11 @@ def max2_s(phi):
     return amnet.Mu(a1, a2, a3)
 
 
-def max2(phi1, phi2):
+def make_max2(phi1, phi2):
     assert phi1.outdim == 1 and \
            phi2.outdim == 1
 
-    return max2_s(amnet.stack(phi1, phi2))
+    return make_max2_s(amnet.stack(phi1, phi2))
 
 
 def _foldl(f, z, xs):
