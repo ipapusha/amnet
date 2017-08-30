@@ -12,10 +12,9 @@ f_i = 0.5;
 C_tf = k_p * tf([1.0, 2.0*pi*f_i], [1.0, 0.0]) * ...
     tf([1.0], [1.0/(2*pi*f_lp)^2, (2.0*beta_lp)/(2*pi*f_lp), 1.0]);
 
-% unscaled system
+% loop transfer function
 L = P_tf * C_tf;
 sys = ss(L);
-%[sys_scaled, info] = prescale(sys);
 
 sysd = ss(c2d(L, 0.001, 'zoh'));
 A = sysd.A;
@@ -23,6 +22,14 @@ B = sysd.B;
 C = sysd.C;
 D = sysd.D;
 assert( all(sysd.D == 0) );
+
+% compute balanced realization
+[sys_bal, g] = balreal(L);
+sysd_bal = c2d(sys_bal, 0.001, 'zoh');
+A = sysd_bal.A;
+B = sysd_bal.B;
+C = sysd_bal.C;
+D = sysd_bal.D;
 
 dlmwrite('vgc_A.csv', A, 'precision', 12);
 dlmwrite('vgc_B.csv', B, 'precision', 12);
