@@ -172,7 +172,7 @@ def make_relu1(x):
     )
 
 
-def make_max2_s(phi):
+def make_max2(phi):
     assert phi.outdim == 2
 
     a1 = amnet.AffineTransformation(
@@ -194,15 +194,58 @@ def make_max2_s(phi):
     return amnet.Mu(a1, a2, a3)
 
 
-def make_max2(phi1, phi2):
-    assert phi1.outdim == 1 and \
-           phi2.outdim == 1
+def make_max3(phi):
+    assert phi.outdim == 3
 
-    return make_max2_s(amnet.stack(phi1, phi2))
+    phi0 = amnet.select(phi, 0)
+    phi12 = amnet.AffineTransformation(
+        np.eye(2, 3, 1),
+        phi,
+        np.zeros(2)
+    )
+
+    max12 = make_max2(phi12)
+    phi0_max12 = amnet.Stack(phi0, max12)
+    max012 = make_max2(phi0_max12)
+
+    return max012
 
 
-def _foldl(f, z, xs):
-    if len(xs) == 0:
-        return z
-    return _foldl(f, f(z, xs[0]), xs[1:])
+def make_max4(phi):
+    """ uses fewer mus than make_max(phi)"""
+    assert phi.outdim == 4
 
+    phi01 = amnet.AffineTransformation(
+        np.eye(2, 4, 0),
+        phi,
+        np.zeros(2)
+    )
+    phi23 = amnet.AffineTransformation(
+        np.eye(2, 4, 2),
+        phi,
+        np.zeros(2)
+    )
+
+    max01 = make_max2(phi01)
+    max23 = make_max2(phi23)
+
+    max01_max23 = amnet.Stack(max01, max23)
+    return make_max2(max01_max23)
+
+
+def make_max(phi):
+    n = phi.outdim
+    if n <= 1: return phi
+    if n == 2: return make_max2(phi)
+
+    phi_0 = amnet.select(phi, 0)
+    phi_rest = amnet.AffineTransformation(
+        np.eye(n-1, n, 1),
+        phi,
+        np.zeros(n-1)
+    )
+
+    assert phi_rest.outdim == n-1
+
+    max_rest = make_max(phi_rest)
+    return make_max2(amnet.Stack(phi_0, max_rest))

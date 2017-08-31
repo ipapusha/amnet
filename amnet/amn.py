@@ -76,6 +76,27 @@ class Mu(Amn):
         else:
             return self.y.eval(inp)
 
+
+class Stack(Amn):
+    def __init__(self, x, y):
+        # assert x.indim == y.indim
+        super(Stack, self).__init__(outdim=x.outdim + y.outdim, indim=x.outdim + y.outdim)
+
+        self.x = x
+        self.y = y
+
+    def __str__(self):
+        return '[%s; %s]' % (str(self.x), str(self.y))
+
+    def eval(self, inp):
+        xv = self.x.eval(inp)
+        yv = self.y.eval(inp)
+
+        assert len(xv) + len(yv) == self.outdim
+        outv = np.concatenate((xv, yv), axis=0)
+        return outv
+
+
 ################################################################################
 # various methods for composing
 ################################################################################
@@ -101,6 +122,7 @@ def _compose_aff_aff_simp(aff1, aff2):
         aff2.x,
         np.dot(aff1.w, aff2.b) + aff1.b
     )
+
 
 def compose(phi1, phi2):
     """ returns phi1(phi2) """
@@ -163,6 +185,7 @@ def select(phi, k):
         np.zeros(1)
     )
 
+
 def wrap_identity(phi):
     """returns phi, wrapped in an identity affine transformation"""
     return AffineTransformation(
@@ -174,6 +197,7 @@ def wrap_identity(phi):
 ################################################################################
 # various methods for stacking
 ################################################################################
+
 
 def _stack_var_var(v1, v2):
     assert isinstance(v1, Variable) and \
