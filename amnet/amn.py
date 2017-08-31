@@ -230,6 +230,7 @@ def _stack_mu_aff(mu, aff):
         mu.z
     )
 
+
 def _stack_mu_mu(mu1, mu2):
     assert isinstance(mu1, Mu) and \
            isinstance(mu2, Mu)
@@ -250,6 +251,11 @@ def _stack_mu_mu(mu1, mu2):
 
 
 def stack(phi1, phi2):
+    # TODO: need to be able to stack non-variables
+    if not(isinstance(phi1, Variable) and isinstance(phi2, Variable)):
+        return NotImplemented
+
+    # code below is wrong
     if isinstance(phi1, Variable):
         if isinstance(phi2, Variable):
             # base case

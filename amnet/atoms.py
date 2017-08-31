@@ -6,12 +6,12 @@ import amnet
 # utility methods
 ################################################################################
 
-def _dimsok_mu(x, y, z):
+def _validdims_mu(x, y, z):
     return (x.outdim == y.outdim) and \
            (z.outdim == 1)
 
 
-def _dimsok_gate(x, y, z1, z2):
+def _validdims_gate(x, y, z1, z2):
     return (x.outdim == y.outdim) and \
            (z1.outdim == 1) and \
            (z2.outdim == 1)
@@ -35,7 +35,7 @@ def make_neg(x):
 ################################################################################
 
 def make_and(x, y, z1, z2):
-    assert _dimsok_gate(x, y, z1, z2)
+    assert _validdims_gate(x, y, z1, z2)
     return amnet.Mu(
         amnet.Mu(
             x,
@@ -48,7 +48,7 @@ def make_and(x, y, z1, z2):
 
 
 def make_or(x, y, z1, z2):
-    assert _dimsok_gate(x, y, z1, z2)
+    assert _validdims_gate(x, y, z1, z2)
     return amnet.Mu(
         x,
         amnet.Mu(
@@ -61,7 +61,7 @@ def make_or(x, y, z1, z2):
 
 
 def make_not(x, y, z):
-    assert _dimsok_mu(x, y, z)
+    assert _validdims_mu(x, y, z)
     return amnet.Mu(
         y,
         z,
@@ -70,7 +70,7 @@ def make_not(x, y, z):
 
 
 def make_xor(x, y, z1, z2):
-    assert _dimsok_gate(x, y, z1, z2)
+    assert _validdims_gate(x, y, z1, z2)
     return amnet.Mu(
         amnet.Mu(
             y,
@@ -91,7 +91,7 @@ def make_xor(x, y, z1, z2):
 ################################################################################
 
 def make_le(x, y, z):
-    assert _dimsok_mu(x, y, z)
+    assert _validdims_mu(x, y, z)
     return amnet.Mu(
         x,
         y,
@@ -100,7 +100,7 @@ def make_le(x, y, z):
 
 
 def make_ge(x, y, z):
-    assert _dimsok_mu(x, y, z)
+    assert _validdims_mu(x, y, z)
     return amnet.Mu(
         x,
         y,
@@ -109,7 +109,7 @@ def make_ge(x, y, z):
 
 
 def make_lt(x, y, z):
-    assert _dimsok_mu(x, y, z)
+    assert _validdims_mu(x, y, z)
     return make_not(
         x,
         y,
@@ -118,7 +118,7 @@ def make_lt(x, y, z):
 
 
 def make_gt(x, y, z):
-    assert _dimsok_mu(x, y, z)
+    assert _validdims_mu(x, y, z)
     return make_not(
         x,
         y,
@@ -127,7 +127,7 @@ def make_gt(x, y, z):
 
 
 def make_eq(x, y, z):
-    assert _dimsok_mu(x, y, z)
+    assert _validdims_mu(x, y, z)
     return make_and(
         x,
         y,
@@ -137,7 +137,7 @@ def make_eq(x, y, z):
 
 
 def make_neq(x, y, z):
-    assert _dimsok_mu(x, y, z)
+    assert _validdims_mu(x, y, z)
     return make_and(
         y,
         x,
@@ -156,6 +156,19 @@ def make_const(b, invar):
         np.zeros((outdim, indim)),
         invar,
         b
+    )
+
+
+def make_relu1(x):
+    """ returns max(x, 0), if x is 1-dimensional"""
+    n = x.outdim
+    assert n == 1
+    assert isinstance(x, amnet.Variable)
+
+    return amnet.Mu(
+        x,
+        make_const(np.zeros(n), x),
+        make_neg(x)
     )
 
 
