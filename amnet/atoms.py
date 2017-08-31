@@ -30,6 +30,16 @@ def make_neg(x):
     )
 
 
+def make_stack(phi_list):
+    assert not(isinstance(phi_list, amnet.Amn)) # has to be a list of Amns
+    assert len(phi_list) >= 1
+    assert isinstance(phi_list[0], amnet.Amn)
+
+    if len(phi_list) == 1:
+        return phi_list[0]
+    return amnet.Stack(phi_list[0], make_stack(phi_list[1:]))
+
+
 ################################################################################
 # Gates from Table 2
 ################################################################################
@@ -147,8 +157,8 @@ def make_neq(x, y, z):
 
 
 ################################################################################
-# untested methods
-
+# deprecated
+################################################################################
 def make_const(b, invar):
     outdim = len(b)
     indim = invar.outdim
@@ -159,17 +169,35 @@ def make_const(b, invar):
     )
 
 
-def make_relu1(x):
-    """ returns max(x, 0), if x is 1-dimensional"""
-    n = x.outdim
-    assert n == 1
-    assert isinstance(x, amnet.Variable)
+################################################################################
+# Methods from Table 1
+################################################################################
 
-    return amnet.Mu(
-        x,
-        make_const(np.zeros(n), x),
-        make_neg(x)
-    )
+def make_relu(phi):
+    """ returns vector with ith component equal to max(phi_i, 0) """
+    n = phi.outdim
+    relus = [None for i in range(n)]
+
+    # populate each component
+    for i in range(n):
+        a1 = amnet.AffineTransformation(
+            np.eye(1, n, i),
+            phi,
+            np.array([0])
+        )
+        a2 = amnet.Constant(np.array([0]))
+        a3 = amnet.AffineTransformation(
+            -np.eye(1, n, i),
+            phi,
+            np.array([0])
+        )
+        #print a1.indim, a2.indim, a3.indim
+        #print a1.outdim, a2.outdim, a3.outdim
+        relus[i] = amnet.Mu(a1, a2, a3)
+        assert relus[i].outdim == 1
+
+    # return a stack of all components
+    return make_stack(relus)
 
 
 def make_max2(phi):
@@ -206,9 +234,8 @@ def make_max3(phi):
 
     max12 = make_max2(phi12)
     phi0_max12 = amnet.Stack(phi0, max12)
-    max012 = make_max2(phi0_max12)
 
-    return max012
+    return make_max2(phi0_max12)
 
 
 def make_max4(phi):
@@ -228,8 +255,8 @@ def make_max4(phi):
 
     max01 = make_max2(phi01)
     max23 = make_max2(phi23)
-
     max01_max23 = amnet.Stack(max01, max23)
+
     return make_max2(max01_max23)
 
 

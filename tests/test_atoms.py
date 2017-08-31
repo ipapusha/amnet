@@ -18,19 +18,6 @@ class TestAtoms(unittest.TestCase):
             axis=0
         )
 
-    def test_make_relu1(self):
-        # define one-dimensional input variable
-        x = amnet.Variable(1, name='x')
-        phi_relu = amnet.atoms.make_relu1(x)
-
-        # true relu
-        def relu(x): return x if x > 0 else 0
-
-        # implemented relu
-        for xv in self.floatvals:
-            inp = np.array([xv])
-            self.assertEqual(phi_relu.eval(inp), relu(inp))
-
     def test_make_max2(self):
         x = amnet.Variable(2, name='x')
         phi_max2 = amnet.atoms.make_max2(x)
@@ -81,6 +68,28 @@ class TestAtoms(unittest.TestCase):
         for xv,yv,zv,wv in product(self.floatvals2, repeat=4):
             xyzwv = np.array([xv, yv, zv, wv])
             self.assertEqual(phi_max.eval(xyzwv), max_true(xyzwv))
+
+    def test_make_relu(self):
+        x = amnet.Variable(4, name='x')
+        y = amnet.Variable(1, name='y')
+        phi_relu = amnet.atoms.make_relu(x)
+        phi_reluy = amnet.atoms.make_relu(y)
+
+        # true relu
+        def relu(x): return np.maximum(x, 0)
+
+        for xv,yv,zv,wv in product(self.floatvals2, repeat=4):
+            xyzwv = np.array([xv, yv, zv, wv])
+            r = phi_relu.eval(xyzwv) # 4-d relu of x
+            s = relu(xyzwv)
+            self.assertTrue(len(r) == 4)
+            self.assertTrue(len(s) == 4)
+            self.assertTrue(all(r == s))
+
+        for yv in self.floatvals:
+            r = phi_reluy.eval(np.array([yv])) # 1-d relu of y
+            s = relu(np.array([yv]))
+            self.assertEqual(r, s)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAtoms)

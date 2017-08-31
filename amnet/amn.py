@@ -57,9 +57,10 @@ class Mu(Amn):
         assert x.outdim == y.outdim
         assert z.outdim == 1
 
-        assert (x.indim == y.indim) and (y.indim == z.indim)
-
-        super(Mu, self).__init__(outdim=x.outdim, indim=x.indim)
+        # TODO: I commented this out to work with Constant()
+        #assert (x.indim == y.indim) and (y.indim == z.indim)
+        #super(Mu, self).__init__(outdim=x.outdim, indim=x.indim)
+        super(Mu, self).__init__(outdim=x.outdim, indim=x.outdim)
 
         self.x = x
         self.y = y
@@ -75,6 +76,19 @@ class Mu(Amn):
             return self.x.eval(inp)
         else:
             return self.y.eval(inp)
+
+
+class Constant(Amn):
+    def __init__(self, c):
+        assert c.ndim == 1
+        super(Constant, self).__init__(outdim=len(c), indim=0)
+        self.c = np.copy(c)
+
+    def __str__(self):
+        return 'Constant(%s)' % (str(self.c))
+
+    def eval(self, inp):
+        return self.c
 
 
 class Stack(Amn):
