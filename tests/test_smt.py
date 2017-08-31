@@ -20,19 +20,19 @@ class TestSmt(unittest.TestCase):
         enc = amnet.smt.SmtEncoder(w)
 
         # check naming
-        name0 = enc.next_unique_varname(prefix='x')
+        name0 = enc.get_unique_varname(prefix='x')
         self.assertEqual(name0, 'x0')
         enc.add_new_symbol(name0)
 
-        name1 = enc.next_unique_varname(prefix='x')
+        name1 = enc.get_unique_varname(prefix='x')
         self.assertEqual(name1, 'x1')
         enc.add_new_symbol(name1)
 
-        name2 = enc.next_unique_varname(prefix='y')
+        name2 = enc.get_unique_varname(prefix='y')
         self.assertEqual(name2, 'y0')
         enc.add_new_symbol(name2)
 
-        name3 = enc.next_unique_varname(prefix='y')
+        name3 = enc.get_unique_varname(prefix='y')
         self.assertEqual(name3, 'y1')
         enc.add_new_symbol(name3)
 
@@ -40,10 +40,10 @@ class TestSmt(unittest.TestCase):
         enc.symbols = dict()
 
         # now add some variables
-        name = enc.next_unique_varname(prefix='x')
+        name = enc.get_unique_varname(prefix='x')
         enc.add_new_var(name)
 
-        name = enc.next_unique_varname(prefix='x')
+        name = enc.get_unique_varname(prefix='x')
         enc.add_new_var(name, 2)
 
         print enc.symbols

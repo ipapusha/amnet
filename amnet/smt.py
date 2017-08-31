@@ -7,7 +7,7 @@ class SmtEncoder(object):
         self.symbols = dict()  # name str -> z3 variable
         self.phi = phi
 
-    def next_unique_varname(self, prefix='x'):
+    def get_unique_varname(self, prefix='x'):
         assert len(prefix) >= 1
         assert prefix[0].isalpha()
 
@@ -29,9 +29,30 @@ class SmtEncoder(object):
 
     def add_new_var(self, name, dim=1):
         assert dim >= 1
+        self.add_new_symbol(name, z3.RealVector(name, dim))
 
-        self.add_new_symbol(name)
-        if dim == 1:
-            self.symbols[name] = z3.Real(name)
+    # helper methods for adding variables to each element type
+    def _get_unique_outvarname(self, psi):
+        if isinstance(psi, amnet.Variable):
+            return self.get_unique_varname(prefix='xv')
+        elif isinstance(psi, amnet.AffineTransformation):
+            return self.get_unique_varname(prefix='ya')
+        elif isinstance(psi, amnet.Mu):
+            return self.get_unique_varname(prefix='wm')
+        elif isinstance(psi, amnet.Constant):
+            return self.get_unique_varname(prefix='c')
+        elif isinstance(psi, amnet.Stack):
+            return self.get_unique_varname(prefix='xys'),
         else:
-            self.symbols[name] = z3.RealVector(name, dim)
+            return self.get_unique_varname(prefix='aa')
+
+    def _init_outvar(self, psi):
+        """ only touches the specific node in the tree """
+        name = self._get_unique_outvarname(psi)
+        psi.outvar = name
+        self.add_new_var(name, psi.outdim)
+        psi.enc = self
+
+        assert len(self.symbols[name]) == psi.outdim
+
+
