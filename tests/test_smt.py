@@ -1,6 +1,8 @@
 import numpy as np
 import amnet
 
+import z3
+
 import unittest
 
 
@@ -38,6 +40,7 @@ class TestSmt(unittest.TestCase):
 
         # clear symbols
         enc.symbols = dict()
+        enc.solver = z3.Solver()
 
         # now add some variables
         name = enc.get_unique_varname(prefix='x')
@@ -52,13 +55,80 @@ class TestSmt(unittest.TestCase):
         self.assertTrue('x1' in enc.symbols)
         self.assertEqual(len(enc.symbols['x1']), 2)
 
-        # clear symbols
-        enc.symbols = dict()
+    def test_SmtEncoder2(self):
+        xyz = amnet.Variable(3, name='xyz')
+
+        x = amnet.select(xyz, 0)
+        y = amnet.select(xyz, 1)
+        z = amnet.select(xyz, 2)
+        w = amnet.Mu(x, y, z)
 
         # do the smt encoding
+        enc = amnet.smt.SmtEncoder(w)
         enc.init_tree()
-        print
-        print enc.solver
+
+        self.assertTrue(enc.solver.check())
+
+        # bind the variables to an input
+        enc.set_const(xyz, np.array([1, 2, 3]))
+        self.assertTrue(enc.solver.check())
+        model = enc.solver.model()
+
+        #print model
+
+        out_z3_list = enc.symbols[w.outvar]
+        out_z3_val = model[out_z3_list[0]]
+        self.assertEqual(out_z3_val, 2)
+
+    def test_SmtEncoder3(self):
+        xyz = amnet.Variable(3, name='xyz')
+
+        x = amnet.select(xyz, 0)
+        y = amnet.select(xyz, 1)
+        z = amnet.select(xyz, 2)
+        w = amnet.Mu(x, y, z)
+
+        # do the smt encoding
+        enc = amnet.smt.SmtEncoder(w)
+        enc.init_tree()
+
+        self.assertTrue(enc.solver.check())
+
+        # bind the variables to an input
+        enc.set_const(xyz, np.array([1, 2, -3.1]))
+        self.assertTrue(enc.solver.check())
+        model = enc.solver.model()
+
+        # print model
+
+        out_z3_list = enc.symbols[w.outvar]
+        out_z3_val = model[out_z3_list[0]]
+        self.assertEqual(out_z3_val, 1)
+
+    def test_SmtEncoder3(self):
+        xyz = amnet.Variable(3, name='xyz')
+
+        x = amnet.select(xyz, 0)
+        y = amnet.select(xyz, 1)
+        z = amnet.select(xyz, 2)
+        w = amnet.Mu(x, y, z)
+
+        # do the smt encoding
+        enc = amnet.smt.SmtEncoder(w)
+        enc.init_tree()
+
+        self.assertTrue(enc.solver.check())
+
+        # bind the variables to an input
+        enc.set_const(xyz, np.array([1.2, 2, -3.1]))
+        self.assertTrue(enc.solver.check())
+        model = enc.solver.model()
+
+        # print model
+
+        out_z3_list = enc.symbols[w.outvar]
+        out_z3_val = model[out_z3_list[0]]
+        self.assertEqual(out_z3_val, 1.2)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)

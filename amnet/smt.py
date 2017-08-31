@@ -53,12 +53,13 @@ class SmtEncoder(object):
 
     def _init_outvar(self, psi):
         """ only touches the specific node in the tree """
-        name = self._get_unique_outvarname(psi)
-        psi.outvar = name
-        self.add_new_var(name, psi.outdim)
+        if not hasattr(psi, 'outvar'):
+            psi.outvar = self._get_unique_outvarname(psi)
+            self.add_new_var(psi.outvar, psi.outdim)
+
         psi.enc = self
 
-        assert len(self.symbols[name]) == psi.outdim
+        assert len(self.symbols[psi.outvar]) == psi.outdim
 
     def _init_tree(self, psi):
         """ touches the whole tree """
@@ -83,6 +84,7 @@ class SmtEncoder(object):
                 bi = psi.b[i]
 
                 rowsum = z3.Sum([wij * xj for wij, xj in izip(rowi, xv) if wij != 0])
+                #rowsum = z3.Sum([wij * xj for wij, xj in izip(rowi, xv)])
                 if bi == 0:
                     self.solver.add(yv[i] == rowsum)
                 else:
@@ -103,9 +105,10 @@ class SmtEncoder(object):
             assert len(xv) == psi.outdim
             assert len(wv) == len(xv)
 
-            z = wv[0]
+            z = zv[0]
             for i in range(len(wv)):
-                x, y, w = xv[i], yv[i], wv[i]
+                x, y, = xv[i], yv[i]
+                w = wv[i]
                 self.solver.add(w == z3.If(z <= 0, x, y))
 
         elif isinstance(psi, amnet.Constant):
@@ -129,3 +132,20 @@ class SmtEncoder(object):
 
     def init_tree(self):
         self._init_tree(self.phi)
+
+    def set_const(self, psi, c):
+        """ set output of amn psi to numpy array c """
+        #print 'Setting constant %s:' % psi.outvar
+        yv = self.symbols[psi.outvar]
+
+        #print 'yv = ', yv
+        assert len(yv) == len(c)
+
+        #print 'solver before:'
+        #print self.solver
+
+        for yi, ci in izip(yv, c):
+            self.solver.add(yi == z3.RealVal(ci))
+
+        #print 'solver after:'
+        #print self.solver
