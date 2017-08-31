@@ -46,8 +46,19 @@ class TestSmt(unittest.TestCase):
         name = enc.get_unique_varname(prefix='x')
         enc.add_new_var(name, 2)
 
-        print enc.symbols
+        self.assertTrue('x0' in enc.symbols)
+        self.assertEqual(len(enc.symbols['x0']), 1)
 
+        self.assertTrue('x1' in enc.symbols)
+        self.assertEqual(len(enc.symbols['x1']), 2)
+
+        # clear symbols
+        enc.symbols = dict()
+
+        # do the smt encoding
+        enc.init_tree()
+        print
+        print enc.solver
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)
