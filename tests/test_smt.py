@@ -1,5 +1,6 @@
 import numpy as np
 import amnet
+from amnet.util import rat2float
 
 import z3
 
@@ -19,6 +20,7 @@ class TestSmt(unittest.TestCase):
             (np.linspace(-5., 5., 3), np.linspace(-.5, .5, 2)),
             axis=0
         )
+        cls.FPTOL = 1e-8
 
     def test_SmtEncoder(self):
         xyz = amnet.Variable(3, name='xyz')
@@ -140,7 +142,7 @@ class TestSmt(unittest.TestCase):
 
         self.assertEqual(wval, 1.2)
 
-    def test_SmtEncoder_Mutest(self):
+    def test_SmtEncoder_mu(self):
         xyz = amnet.Variable(3, name='xyzv')
 
         x = amnet.select(xyz, 0)
@@ -167,6 +169,57 @@ class TestSmt(unittest.TestCase):
             self.assertEqual(wval, true_mu(xv, yv, zv))
 
             enc.solver.pop()
+
+    def test_SmtEncoder_triplexer(self):
+        np.random.seed(1)
+
+        for _ in range(2):
+            # create a random triplexer
+            x = amnet.Variable(1, name='xv')
+
+            a = 3 * (2 * np.random.rand(4) - 1)
+            b = 3 * (2 * np.random.rand(4) - 1)
+            c = 3 * (2 * np.random.rand(4) - 1)
+            d = 3 * (2 * np.random.rand(4) - 1)
+            e = 3 * (2 * np.random.rand(4) - 1)
+            f = 3 * (2 * np.random.rand(4) - 1)
+            phi_tri = amnet.atoms.make_triplexer(x, a, b, c, d, e, f)
+
+            # do the smt encoding
+            enc = amnet.smt.SmtEncoder(phi_tri)
+            enc.init_tree()
+            trisym = enc.get_symbol(phi_tri)
+
+            self.assertTrue(enc.solver.check())
+            model = enc.solver.model()
+
+            #print "before model:"
+            #print model
+
+            xvals = 50 * (2 * np.random.rand(100) - 1)
+            for xv in xvals:
+                # save z3 state
+                enc.solver.push()
+
+                enc.set_const(x, np.array([xv]))
+                self.assertTrue(enc.solver.check())
+
+                model = enc.solver.model()
+
+                #print "after model:"
+                #print model
+
+                trival = rat2float(model[trisym[0]])
+                fpval = amnet.atoms.fp_triplexer(
+                    np.array([xv]),
+                    a, b, c, d, e, f
+                )
+                self.assertLessEqual(np.abs(trival - fpval), self.FPTOL)
+
+                # remove z3 state
+                enc.solver.pop()
+
+
 
 
 if __name__ == '__main__':

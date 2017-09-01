@@ -338,3 +338,40 @@ def make_triplexer(phi, a, b, c, d, e, f):
     )
 
     return w[3]
+
+
+################################################################################
+# Floating-point functions (for testing)
+################################################################################
+
+def fp_mu(x, y, z):
+    return x if z <= 0 else y
+
+
+def fp_triplexer(inp, a, b, c, d, e, f):
+    assert all([len(p) == 4 for p in [a, b, c, d, e, f]])
+
+    x = [0] * 4
+    y = [0] * 4
+    z = [0] * 4
+    w = [0] * 4
+
+    # Layer 1 weights
+    for i in range(3):
+        x[i] = a[i] * inp + b[i]
+        y[i] = c[i] * inp + d[i]
+        z[i] = e[i] * inp + f[i]
+
+    # Layer 1 nonlinearity
+    for i in range(3):
+        w[i] = fp_mu(x[i], y[i], z[i])
+
+    # Layer 2 weights
+    x[3] = a[3] * w[1] + b[3]
+    y[3] = c[3] * w[2] + d[3]
+    z[3] = e[3] * w[0] + f[3]
+
+    # Layer 2 nonlinearity
+    w[3] = fp_mu(x[3], y[3], z[3])
+
+    return w[3]
