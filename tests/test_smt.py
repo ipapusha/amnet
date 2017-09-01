@@ -3,6 +3,7 @@ import amnet
 
 import z3
 
+import sys
 import unittest
 import itertools
 
@@ -170,4 +171,5 @@ class TestSmt(unittest.TestCase):
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
+    sys.exit(not result.wasSuccessful())

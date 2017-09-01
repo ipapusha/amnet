@@ -1,6 +1,7 @@
 import numpy as np
 import amnet
 
+import sys
 import unittest
 from itertools import chain, product
 
@@ -95,19 +96,20 @@ class TestAtoms(unittest.TestCase):
         x = amnet.Variable(1, name='xv')
 
         np.random.seed(1)
-        a = 3 * (2 * np.random.rand(4) - 1)
-        b = 3 * (2 * np.random.rand(4) - 1)
-        c = 3 * (2 * np.random.rand(4) - 1)
-        d = 3 * (2 * np.random.rand(4) - 1)
-        e = 3 * (2 * np.random.rand(4) - 1)
-        f = 3 * (2 * np.random.rand(4) - 1)
 
-        phi_tri = amnet.atoms.make_triplexer(x, a, b, c, d, e, f)
+        for iter in range(10):
+            a = 3 * (2 * np.random.rand(4) - 1)
+            b = 3 * (2 * np.random.rand(4) - 1)
+            c = 3 * (2 * np.random.rand(4) - 1)
+            d = 3 * (2 * np.random.rand(4) - 1)
+            e = 3 * (2 * np.random.rand(4) - 1)
+            f = 3 * (2 * np.random.rand(4) - 1)
+            phi_tri = amnet.atoms.make_triplexer(x, a, b, c, d, e, f)
 
-        xvals = 10 * (2 * np.random.rand(1000) - 1)
-        for xv in xvals:
-            self.assertEqual(phi_tri.eval(np.array([xv])),
-                             fp_triplexer(xv, a, b, c, d, e, f))
+            xvals = 100 * (2 * np.random.rand(1000) - 1)
+            for xv in xvals:
+                self.assertEqual(phi_tri.eval(np.array([xv])),
+                                 fp_triplexer(xv, a, b, c, d, e, f))
 
 
 
@@ -142,4 +144,5 @@ def fp_triplexer(inp, a, b, c, d, e, f):
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAtoms)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
+    sys.exit(not result.wasSuccessful())
