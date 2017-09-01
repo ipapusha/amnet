@@ -36,10 +36,17 @@ class SmtEncoder(object):
         assert dim >= 1
         self.add_new_symbol(name, z3.RealVector(name, dim))
 
+    def get_symbol(self, psi):
+        return self.symbols[psi.outvar]
+
+    def set_symbol(self, psi, target):
+        self.symbols[psi.outvar] = target
+
     # helper methods for adding variables to each element type
     def _get_unique_outvarname(self, psi):
         if isinstance(psi, amnet.Variable):
-            return self.get_unique_varname(prefix='xv')
+            #return self.get_unique_varname(prefix='xv')
+            return self.get_unique_varname(prefix=psi.name)
         elif isinstance(psi, amnet.AffineTransformation):
             return self.get_unique_varname(prefix='ya')
         elif isinstance(psi, amnet.Mu):
@@ -128,24 +135,16 @@ class SmtEncoder(object):
             for left, right in izip(xyv, chain(xv, yv)):
                 self.solver.add(left == right)
         else:
-            return NotImplemented
+            raise Exception('Invalid node type')
 
     def init_tree(self):
         self._init_tree(self.phi)
 
     def set_const(self, psi, c):
         """ set output of amn psi to numpy array c """
-        #print 'Setting constant %s:' % psi.outvar
-        yv = self.symbols[psi.outvar]
+        yv = self.get_symbol(psi)
 
-        #print 'yv = ', yv
         assert len(yv) == len(c)
 
-        #print 'solver before:'
-        #print self.solver
-
-        for yi, ci in izip(yv, c):
-            self.solver.add(yi == z3.RealVal(ci))
-
-        #print 'solver after:'
-        #print self.solver
+        for yvi, ci in izip(yv, c):
+            self.solver.add(yvi == z3.RealVal(ci))

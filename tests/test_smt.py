@@ -4,12 +4,20 @@ import amnet
 import z3
 
 import unittest
-
+import itertools
 
 class TestSmt(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        pass
+        print 'Setting up test floats.'
+        cls.floatvals = np.concatenate(
+            (np.linspace(-5., 5., 11), np.linspace(-5., 5., 10)),
+            axis=0
+        )
+        cls.floatvals2 = np.concatenate(
+            (np.linspace(-5., 5., 3), np.linspace(-.5, .5, 2)),
+            axis=0
+        )
 
     def test_SmtEncoder(self):
         xyz = amnet.Variable(3, name='xyz')
@@ -124,11 +132,41 @@ class TestSmt(unittest.TestCase):
         self.assertTrue(enc.solver.check())
         model = enc.solver.model()
 
-        # print model
+        # retrieve the output
+        wsym = enc.get_symbol(w)
+        self.assertEqual(len(wsym), 1)
+        wval = model[wsym[0]]
 
-        out_z3_list = enc.symbols[w.outvar]
-        out_z3_val = model[out_z3_list[0]]
-        self.assertEqual(out_z3_val, 1.2)
+        self.assertEqual(wval, 1.2)
+
+    def test_SmtEncoder_Mutest(self):
+        xyz = amnet.Variable(3, name='xyzv')
+
+        x = amnet.select(xyz, 0)
+        y = amnet.select(xyz, 1)
+        z = amnet.select(xyz, 2)
+        w = amnet.Mu(x, y, z)
+
+        # do the smt encoding
+        enc = amnet.smt.SmtEncoder(w)
+        enc.init_tree()
+        wsym = enc.get_symbol(w)
+
+        def true_mu(x, y, z): return x if z <= 0 else y
+
+        # set the output
+        for xv, yv, zv in itertools.product(self.floatvals2, repeat=3):
+            enc.solver.push()
+
+            enc.set_const(xyz, np.array([xv, yv, zv]))
+            self.assertTrue(enc.solver.check())
+
+            model = enc.solver.model()
+            wval = model[wsym[0]]
+            self.assertEqual(wval, true_mu(xv, yv, zv))
+
+            enc.solver.pop()
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)
