@@ -276,3 +276,65 @@ def make_max(phi):
 
     max_rest = make_max(phi_rest)
     return make_max2(amnet.Stack(phi_0, max_rest))
+
+
+def make_triplexer(phi, a, b, c, d, e, f):
+    assert phi.outdim == 1
+    assert all([len(p) == 4 for p in [a, b, c, d, e, f]])
+
+    x = [None] * 4
+    y = [None] * 4
+    z = [None] * 4
+    w = [None] * 4
+
+    # Layer 1 weights
+    for i in range(3):
+        x[i] = amnet.AffineTransformation(
+            np.array(a[i]).reshape((1, 1)),
+            phi,
+            np.array(b[i]).reshape((1,))
+        )
+        y[i] = amnet.AffineTransformation(
+            np.array(c[i]).reshape((1, 1)),
+            phi,
+            np.array(d[i]).reshape((1,))
+        )
+        z[i] = amnet.AffineTransformation(
+            np.array(e[i]).reshape((1, 1)),
+            phi,
+            np.array(f[i]).reshape((1,))
+        )
+
+    # Layer 1 nonlinearity
+    for i in range(3):
+        w[i] = amnet.Mu(
+            x[i],
+            y[i],
+            z[i]
+        )
+
+    # Layer 2 weights
+    x[3] = amnet.AffineTransformation(
+        np.array(a[3]).reshape((1, 1)),
+        w[1],
+        np.array(b[3]).reshape((1,))
+    )
+    y[3] = amnet.AffineTransformation(
+        np.array(c[3]).reshape((1, 1)),
+        w[2],
+        np.array(d[3]).reshape((1,))
+    )
+    z[3] = amnet.AffineTransformation(
+        np.array(e[3]).reshape((1, 1)),
+        w[0],
+        np.array(f[3]).reshape((1,))
+    )
+
+    # Layer 2 nonlinearity
+    w[3] = amnet.Mu(
+        x[3],
+        y[3],
+        z[3]
+    )
+
+    return w[3]
