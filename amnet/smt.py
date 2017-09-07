@@ -12,6 +12,9 @@ class SmtEncoder(object):
         else:
             self.solver = solver
 
+    def __str__(self):
+        return 'SmtEncoder: ' + str(self.symbols)
+
     def get_unique_varname(self, prefix='x'):
         assert len(prefix) >= 1
         assert prefix[0].isalpha()

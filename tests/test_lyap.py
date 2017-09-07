@@ -4,6 +4,7 @@ import numpy as np
 import scipy as sp
 from scipy.linalg import expm
 from numpy.linalg import eigvals
+
 import amnet
 
 import sys
@@ -16,7 +17,8 @@ class TestLyap(unittest.TestCase):
         pass
 
     def test_stability_search1(self):
-        # pick a known stable linear system
+        # generate a known stable linear system
+        n = 2
         zeta = 0.2             # damping factor
         wn = 2.0*np.pi*10.0    # natural frequency
         h = 0.01               # sampling rate
@@ -26,12 +28,15 @@ class TestLyap(unittest.TestCase):
         Ad = expm(h * Ac)
         assert all([abs(ev) < 1.0 for ev in eigvals(Ad)])
 
-        print
+        xsys = amnet.Variable(2, name='xsys')
+        phi = amnet.AffineTransformation(
+            Ad,
+            xsys,
+            np.zeros(n)
+        )
 
-        x = amnet.Variable(2, name='x')
-        # phi = amnet.AffineTransformation(
-        #
-        # )
+        # look for a Lyapunov function
+        amnet.lyap.stability_search1(phi, xsys, 5)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestLyap)
