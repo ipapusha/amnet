@@ -26,6 +26,11 @@ def stability_search1(phi, x, m):
 
     # 1. E-solve
     Avar = [z3.RealVector('A' + str(i), n) for i in range(m)]
+    bvar = z3.RealVector('b', m)
+
+    solver = z3.Solver()
+    for xc in Xc:
+        print xc
 
     # 2. F-solve
 
