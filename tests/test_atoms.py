@@ -70,6 +70,25 @@ class TestAtoms(unittest.TestCase):
             xyzwv = np.array([xv, yv, zv, wv])
             self.assertEqual(phi_max.eval(xyzwv), max_true(xyzwv))
 
+    def test_make_max_affine(self):
+        x = amnet.Variable(5, name='x')
+
+        np.random.seed(1)
+        A = 10 * (2 * np.random.rand(4, 5) - 1)
+        b = 10 * (2 * np.random.rand(4) - 1)
+
+        phi_max_aff = amnet.atoms.make_max_aff(A, b, x)
+
+        # true max-affine
+        def maxaff(xv): return np.max(np.dot(A, xv) + b)
+
+        for _ in range(10):
+            xv = 10 * (2 * np.random.rand(5) - 1)
+            mv1 = phi_max_aff.eval(xv)
+            mv2 = maxaff(xv)
+            self.assertEqual(mv1, mv2)
+
+
     def test_make_relu(self):
         x = amnet.Variable(4, name='x')
         y = amnet.Variable(1, name='y')

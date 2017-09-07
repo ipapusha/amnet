@@ -278,6 +278,22 @@ def make_max(phi):
     return make_max2(amnet.Stack(phi_0, max_rest))
 
 
+def make_max_aff(A, b, phi):
+    """ returns an AMN that evaluates to 
+        max_i(sum_j a_{ij} phi_j + b_i) """
+    (m, n) = A.shape
+    assert len(b) == m
+    assert phi.outdim == n
+
+    phi_aff = amnet.AffineTransformation(
+        A,
+        phi,
+        b
+    )
+
+    return make_max(phi_aff)
+
+
 def make_triplexer(phi, a, b, c, d, e, f):
     assert phi.outdim == 1
     assert all([len(p) == 4 for p in [a, b, c, d, e, f]])
@@ -338,6 +354,7 @@ def make_triplexer(phi, a, b, c, d, e, f):
     )
 
     return w[3]
+
 
 
 ################################################################################
