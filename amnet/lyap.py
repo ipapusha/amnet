@@ -31,7 +31,7 @@ def stability_search1(phi, xsys, m):
 
     # init counterexample set
     Xc = list()
-    Xc.append(np.zeros(n))
+    Xc.append(np.ones((n,)))
 
     # init SMT solver
     esolver = z3.Solver()
@@ -52,6 +52,8 @@ def stability_search1(phi, xsys, m):
         print 'iter=%s: Xc=%s' % (iter, Xc)
         print 'Avar=%s' % Avar
         print 'bvar=%s' % bvar
+
+        esolver.add(_maxN_z3(bvar) == 0)
 
         for k, xk in enumerate(Xc):
             # point value
@@ -116,7 +118,8 @@ def stability_search1(phi, xsys, m):
         x = enc.get_symbol(xsys)
 
         # encode Vx
-        Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
+        #Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
+        Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n)]) for i in range(m)]
         Vx_expr = _maxN_z3(Vx_terms)
         Vx = z3.Real('vx')
         fsolver.add(Vx == Vx_expr)
@@ -125,7 +128,8 @@ def stability_search1(phi, xsys, m):
         x_next = enc.get_symbol(phi)
 
         # encode Vx_next
-        Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
+        #Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
+        Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n)]) for i in range(m)]
         Vx_next_expr = _maxN_z3(Vx_next_terms)
         Vx_next = z3.Real('vx_next')
         fsolver.add(Vx_next == Vx_next_expr)
