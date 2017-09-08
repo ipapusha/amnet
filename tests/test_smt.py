@@ -1,6 +1,6 @@
 import numpy as np
 import amnet
-from amnet.util import rat2float
+from amnet.util import r2f
 
 import z3
 
@@ -209,7 +209,7 @@ class TestSmt(unittest.TestCase):
                 #print "after model:"
                 #print model
 
-                trival = rat2float(model[trisym[0]])
+                trival = r2f(model[trisym[0]])
                 fpval = amnet.atoms.fp_triplexer(
                     np.array([xv]),
                     a, b, c, d, e, f

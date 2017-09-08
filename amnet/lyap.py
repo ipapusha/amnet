@@ -1,6 +1,6 @@
 import numpy as np
 import amnet
-from amnet.util import foldl, rat2float
+from amnet.util import foldl, r2f, mfp
 
 import z3
 
@@ -9,7 +9,8 @@ def _maxN_z3(xs):
     assert len(xs) >= 1
     return foldl(_max2_z3, xs[0], xs[1:])
 
-def stability_search1(phi, x, m):
+
+def stability_search1(phi, xsys, m):
     """ Attempts to find a max-affine Lyapunov function
         that proves global stability of an AMN:
         
@@ -21,15 +22,16 @@ def stability_search1(phi, x, m):
         x should be a ref to the input variable to phi
     """
     n = phi.outdim
-    assert n == x.outdim
+    assert n == xsys.outdim
     assert m >= 1
 
     # 0. Initialize
     print 'Initializing stability_search1'
+    MAX_ITER = 10
 
     # init counterexample set
     Xc = list()
-    Xc.append(np.ones(n))
+    Xc.append(np.zeros(n))
 
     # init SMT solver
     esolver = z3.Solver()
@@ -39,65 +41,116 @@ def stability_search1(phi, x, m):
 
     print enc
 
-    # 1. E-solve
-    Avar = [z3.RealVector('A' + str(i), n) for i in range(m)]
-    bvar = z3.RealVector('b', m)
+    for iter in range(MAX_ITER):
 
-    esolver.push()
+        # 1. E-solve
+        esolver.push()
 
-    for k, xk in enumerate(Xc):
-        # point value
-        xk_next = phi.eval(xk)
+        Avar = [z3.RealVector('A' + str(i), n) for i in range(m)]
+        bvar = z3.RealVector('b', m)
 
-        # Lyapunov max expressions
-        Vk_terms = list()
-        Vk_next_terms = list()
-        for i in range(n):
-            Vk_terms.append(
-                z3.Sum(
-                    [Avar[i][j] * xk[j] for j in range(n) if xk[j] != 0]
+        print 'iter=%s: Xc=%s' % (iter, Xc)
+        print 'Avar=%s' % Avar
+        print 'bvar=%s' % bvar
+
+        for k, xk in enumerate(Xc):
+            # point value
+            xk_next = phi.eval(xk)
+
+            # Lyapunov max expressions
+            Vk_terms = list()
+            Vk_next_terms = list()
+            for i in range(n):
+                Vk_terms.append(
+                    z3.Sum(
+                        [Avar[i][j] * xk[j] for j in range(n) if xk[j] != 0]
+                    )
                 )
-            )
-            Vk_next_terms.append(
-                z3.Sum(
-                    [Avar[i][j] * xk_next[j] for j in range(n) if xk_next[j] != 0]
+                Vk_next_terms.append(
+                    z3.Sum(
+                        [Avar[i][j] * xk_next[j] for j in range(n) if xk_next[j] != 0]
+                    )
                 )
+            Vk_expr = _maxN_z3(Vk_terms)
+            Vk_next_expr = _maxN_z3(Vk_next_terms)
+
+            # Lyapunov function constraints for counterexample xk
+            Vk = z3.Real('v' + str(k))
+            Vk_next = z3.Real('v' + str(k) + '_next')
+            esolver.add(Vk == Vk_expr)
+            esolver.add(Vk_next == Vk_next_expr)
+
+            # nonnegativity/decrement of V
+            if not all(xk == 0):
+                esolver.add(Vk > 0)
+                esolver.add(Vk_next - Vk < 0)
+            else:
+                esolver.add(Vk == 0)
+
+        # find a candidate Lyapunov function
+        if esolver.check():
+            print 'iter=%s: Found new Lyapunov Function' % iter
+            print 'esolver=%s' % esolver
+            model = esolver.model()
+            A_cand = np.array(
+                [[mfp(model, Avar[i][j]) for j in range(n)] for i in range(m)]
             )
-        Vk_expr = _maxN_z3(Vk_terms)
-        Vk_next_expr = _maxN_z3(Vk_next_terms)
+            b_cand = np.array(
+                [mfp(model, bvar[j]) for j in range(n)]
+            )
+            print "V(x)=max(Ax+b):"
+            print "A=" + str(A_cand)
+            print "b=" + str(b_cand)
+        else:
+            print 'iter=%s: Stability unknown, exiting' % iter
+            return None
 
-        # Lyapunov function constraints for counterexample xk
-        Vk = z3.Real('v' + str(k))
-        Vk_next = z3.Real('v' + str(k) + '_next')
-        esolver.add(Vk == Vk_expr)
-        esolver.add(Vk_next == Vk_next_expr)
+        esolver.pop()
 
-        # nonnegativity of V
-        if not all(xk == 0):
-            esolver.add(Vk > 0)
+        # 2. F-solve
+        # find counterexample for candidate Lyapunov function
 
-        # V has to decrease
-        esolver.add(Vk_next < Vk)
+        fsolver.push()
 
-    # find a candidate Lyapunov function
-    if esolver.check():
-        print 'Found new Lyapunov Function'
-        model = esolver.model()
-        A_cand = np.array(
-            [[rat2float(model.eval(Avar[i][j], model_completion=True)) for j in range(n)] for i in range(m)]
-        )
-        b_cand = np.array(
-            [rat2float(model.eval(bvar[j], model_completion=True)) for j in range(n)]
-        )
-        print "V(x)=max(Ax+b):"
-        print "A=" + str(A_cand)
-        print "b=" + str(b_cand)
-    else:
-        print 'Stability unknown'
-        return None
+        # z3 symbol for input to phi
+        x = enc.get_symbol(xsys)
 
-    esolver.pop()
+        # encode Vx
+        Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
+        Vx_expr = _maxN_z3(Vx_terms)
+        Vx = z3.Real('vx')
+        fsolver.add(Vx == Vx_expr)
 
-    # 2. F-solve
+        # z3 symbol for phi(x)
+        x_next = enc.get_symbol(phi)
 
-    pass
+        # encode Vx_next
+        Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
+        Vx_next_expr = _maxN_z3(Vx_next_terms)
+        Vx_next = z3.Real('vx_next')
+        fsolver.add(Vx_next == Vx_next_expr)
+
+        # encode failure to decrement
+        fsolver.add(z3.Not(x==0))
+        fsolver.add(z3.Not(z3.And(Vx > 0, Vx_next - Vx < 0)))
+
+        # look for a counterexample
+        if fsolver.check():
+            print 'iter=%s: Found new Counterexample' % iter
+            print 'fsolver=%s' % fsolver
+            fmodel = fsolver.model()
+            xc = np.array([mfp(fmodel, x[j]) for j in range(n)])
+            Xc.append(xc)
+        else:
+            print 'iter=%s: No Counterexample found' % iter
+            print 'Lyapunov function found'
+
+            print "V(x)=max(Ax+b):"
+            print "A=" + str(A_cand)
+            print "b=" + str(b_cand)
+
+            fsolver.pop()
+            return (A, b)
+
+
+        fsolver.pop()
