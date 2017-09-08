@@ -8,6 +8,7 @@ def rat2float(r):
     """
     return float(r.numerator_as_long())/float(r.denominator_as_long())
 
+
 def foldl(f, z, xs):
     """
     Left fold (not lazy), similar to to Haskell's

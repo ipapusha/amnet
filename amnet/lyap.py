@@ -1,6 +1,6 @@
 import numpy as np
 import amnet
-from amnet.util import foldl
+from amnet.util import foldl, rat2float
 
 import z3
 
@@ -82,13 +82,16 @@ def stability_search1(phi, x, m):
     # find a candidate Lyapunov function
     if esolver.check():
         print 'Found new Lyapunov Function'
-        m = esolver.model()
-        print m
-        #A_cand = [ [ m[Avar[i][j]] for j in range(n) ] for i in range(m) ]
-        #b_cand = [ m[bvar[i]] for i in range(m) ]
-
-        #print A_cand
-        #print b_cand
+        model = esolver.model()
+        A_cand = np.array(
+            [[rat2float(model.eval(Avar[i][j], model_completion=True)) for j in range(n)] for i in range(m)]
+        )
+        b_cand = np.array(
+            [rat2float(model.eval(bvar[j], model_completion=True)) for j in range(n)]
+        )
+        print "V(x)=max(Ax+b):"
+        print "A=" + str(A_cand)
+        print "b=" + str(b_cand)
     else:
         print 'Stability unknown'
         return None
