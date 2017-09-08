@@ -27,7 +27,7 @@ def stability_search1(phi, xsys, m):
 
     # 0. Initialize
     print 'Initializing stability_search1'
-    MAX_ITER = 10
+    MAX_ITER = 20
 
     # init counterexample set
     Xc = list()
@@ -85,7 +85,8 @@ def stability_search1(phi, xsys, m):
             # nonnegativity/decrement of V
             if not all(xk == 0):
                 esolver.add(Vk > 0)
-                esolver.add(Vk_next - Vk < 0)
+                #esolver.add(Vk_next - Vk < 0)
+                esolver.add(Vk_next <= 0.9*Vk)
             else:
                 esolver.add(Vk == 0)
 
@@ -118,8 +119,8 @@ def stability_search1(phi, xsys, m):
         x = enc.get_symbol(xsys)
 
         # encode Vx
-        #Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
-        Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n)]) for i in range(m)]
+        Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
+        #Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n)]) for i in range(m)]
         Vx_expr = _maxN_z3(Vx_terms)
         Vx = z3.Real('vx')
         fsolver.add(Vx == Vx_expr)
@@ -128,8 +129,8 @@ def stability_search1(phi, xsys, m):
         x_next = enc.get_symbol(phi)
 
         # encode Vx_next
-        #Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
-        Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n)]) for i in range(m)]
+        Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
+        #Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n)]) for i in range(m)]
         Vx_next_expr = _maxN_z3(Vx_next_terms)
         Vx_next = z3.Real('vx_next')
         fsolver.add(Vx_next == Vx_next_expr)
