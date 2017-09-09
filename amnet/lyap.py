@@ -3,6 +3,7 @@ import amnet
 from amnet.util import foldl, r2f, mfp
 
 import z3
+import cvxpy
 
 import itertools
 
@@ -189,7 +190,20 @@ def stability_search1(phi, xsys, m):
 
 ################################################################################
 # convex-based solver
+# incomplete
 ################################################################################
+
+
+def get_candidate_lyapunov(Xc, Xc_next, m, n):
+    Nc = len(Xc)
+    assert all([len(xc) == n for xc in Xc])
+    assert len(Xc_next) == Nc
+    assert all([len(xc_next) == n for xc_next in Xc_next])
+
+    A = cvxpy.Variable(m, n)
+    cons = list()
+    for xc, xc_next in itertools.izip(Xc, Xc_next):
+        cvxpy.max_entries(A*xc) # TODO: check multiplication
 
 
 def stability_search2(phi, xsys, m):

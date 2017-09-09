@@ -16,7 +16,7 @@ class TestLyap(unittest.TestCase):
     def setUpClass(cls):
         pass
 
-    def test_stability_search1(self):
+    def stability_search1(self):
         # generate a known stable linear system
         n = 2
         zeta = 0.2             # damping factor
@@ -44,6 +44,9 @@ class TestLyap(unittest.TestCase):
         # look for a Lyapunov function
         #amnet.lyap.stability_search1(phi, xsys, 10)
         amnet.lyap.stability_search1(phi, xsys, 4)  # enough for Metzler sys
+
+    def test_cvxpy(self):
+        pass
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestLyap)
