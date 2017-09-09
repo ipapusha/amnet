@@ -79,23 +79,6 @@ def stability_search1(phi, xsys, m):
             xk_next = phi.eval(xk)
 
             # Lyapunov max expressions
-            # Vk_terms = list()
-            # Vk_next_terms = list()
-            # for i in range(m):
-            #     Vk_terms.append(
-            #         z3.Sum(
-            #             #[Avar[i][j] * xk[j] for j in range(n) if xk[j] != 0]
-            #             [Avar[i][j] * xk[j] for j in range(n)]
-            #         )
-            #         + bvar[i]
-            #     )
-            #     Vk_next_terms.append(
-            #         z3.Sum(
-            #             #[Avar[i][j] * xk_next[j] for j in range(n) if xk_next[j] != 0]
-            #             [Avar[i][j] * xk_next[j] for j in range(n)]
-            #         )
-            #         + bvar[i]
-            #     )
             Vk_terms = [z3.Sum([Avar[i][j]*xk[j] for j in range(n)]) + bvar[i] for i in range(m)]
             Vk_next_terms = [z3.Sum([Avar[i][j] * xk_next[j] for j in range(n)]) + bvar[i] for i in range(m)]
             Vk_expr = _maxN_z3(Vk_terms)
@@ -121,7 +104,6 @@ def stability_search1(phi, xsys, m):
             esolver.add(_maxN_z3(bvar) == 0)
 
             #esolver.add([bvar[i] == 0 for i in range(m)])
-
 
             # CONDITIONING: impose normalization on A
             for i in range(m):
@@ -204,3 +186,33 @@ def stability_search1(phi, xsys, m):
     # max iterations reached
     print 'Max iterations reached'
     return None
+
+################################################################################
+# convex-based solver
+################################################################################
+
+
+def stability_search2(phi, xsys, m):
+    """ Attempts to find a max-affine Lyapunov function
+        that proves global stability of an AMN:
+
+        Dynamical system: x(t+1) = phi(x(t))
+        Lyapunov function: V(x) = max(Ax+b),
+                           A (m-by-n) and b (m)
+
+        A and b are recalculated again at every E-solve step
+        x should be a ref to the input variable to phi
+    """
+    n = phi.outdim
+    assert n == xsys.outdim
+    assert m >= 1
+
+    # 0. Initialize
+    print 'Initializing stability_search1'
+    MAX_ITER = 50
+
+    # init counterexample set
+    Xc = list()
+    # go around the Linf 1-ball
+    for xcpoint in itertools.product([-1, 1], repeat=n):
+        Xc.append(np.array(xcpoint))
