@@ -109,6 +109,11 @@ def stability_search1(phi, xsys, m):
 
             # CONDITIONING: impose upper bound on b
             esolver.add(_normL1_z3(bvar) <= 10)
+            esolver.add(_maxN_z3(bvar) == 0)
+
+            # CONDITIONING: impose normalization on A
+            for i in range(m):
+                esolver.add(_normL1_z3(Avar[i]) <= 10)
 
         # find a candidate Lyapunov function
         if esolver.check() == z3.sat:
@@ -179,7 +184,7 @@ def stability_search1(phi, xsys, m):
             print "b=" + str(b_cand)
 
             fsolver.pop()
-            return (A, b)
+            return (A_cand, b_cand)
 
 
         fsolver.pop()

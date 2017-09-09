@@ -1,12 +1,20 @@
 from __future__ import division
 import z3
+from fractions import Fraction
+
 
 
 def r2f(r):
     """ converts z3 rational to a python float,
         consider calling r = model[var].approx(20) to be within 1e-20
     """
-    return float(r.numerator_as_long())/float(r.denominator_as_long())
+    # return float(r.numerator_as_long())/float(r.denominator_as_long())
+
+    #r2 = r.approx(10)
+    #return float(r2.numerator_as_long())/float(r2.denominator_as_long())
+
+    r2 = r.as_fraction().limit_denominator()
+    return r2.numerator/r2.denominator
 
 
 def mfp(model, var):
