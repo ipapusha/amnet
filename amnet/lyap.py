@@ -4,6 +4,8 @@ from amnet.util import foldl, r2f, mfp
 
 import z3
 
+import itertools
+
 def _max2_z3(x, y):
     return z3.If(x <= y, y, x)
 
@@ -45,7 +47,10 @@ def stability_search1(phi, xsys, m):
 
     # init counterexample set
     Xc = list()
-    Xc.append(np.ones((n,)))
+    #Xc.append(np.ones((n,)))
+    # go around the Linf 1-ball
+    for xcpoint in itertools.product([-1,1], repeat=n):
+        Xc.append(np.array(xcpoint))
 
     # init SMT solver
     esolver = z3.Solver()
@@ -74,21 +79,25 @@ def stability_search1(phi, xsys, m):
             xk_next = phi.eval(xk)
 
             # Lyapunov max expressions
-            Vk_terms = list()
-            Vk_next_terms = list()
-            for i in range(n):
-                Vk_terms.append(
-                    z3.Sum(
-                        [Avar[i][j] * xk[j] for j in range(n) if xk[j] != 0]
-                    )
-                    + bvar[i]
-                )
-                Vk_next_terms.append(
-                    z3.Sum(
-                        [Avar[i][j] * xk_next[j] for j in range(n) if xk_next[j] != 0]
-                    )
-                    + bvar[i]
-                )
+            # Vk_terms = list()
+            # Vk_next_terms = list()
+            # for i in range(m):
+            #     Vk_terms.append(
+            #         z3.Sum(
+            #             #[Avar[i][j] * xk[j] for j in range(n) if xk[j] != 0]
+            #             [Avar[i][j] * xk[j] for j in range(n)]
+            #         )
+            #         + bvar[i]
+            #     )
+            #     Vk_next_terms.append(
+            #         z3.Sum(
+            #             #[Avar[i][j] * xk_next[j] for j in range(n) if xk_next[j] != 0]
+            #             [Avar[i][j] * xk_next[j] for j in range(n)]
+            #         )
+            #         + bvar[i]
+            #     )
+            Vk_terms = [z3.Sum([Avar[i][j]*xk[j] for j in range(n)]) + bvar[i] for i in range(m)]
+            Vk_next_terms = [z3.Sum([Avar[i][j] * xk_next[j] for j in range(n)]) + bvar[i] for i in range(m)]
             Vk_expr = _maxN_z3(Vk_terms)
             Vk_next_expr = _maxN_z3(Vk_next_terms)
 
@@ -111,6 +120,9 @@ def stability_search1(phi, xsys, m):
             esolver.add(_normL1_z3(bvar) <= 10)
             esolver.add(_maxN_z3(bvar) == 0)
 
+            #esolver.add([bvar[i] == 0 for i in range(m)])
+
+
             # CONDITIONING: impose normalization on A
             for i in range(m):
                 esolver.add(_normL1_z3(Avar[i]) <= 10)
@@ -124,7 +136,7 @@ def stability_search1(phi, xsys, m):
                 [[mfp(model, Avar[i][j]) for j in range(n)] for i in range(m)]
             )
             b_cand = np.array(
-                [mfp(model, bvar[j]) for i in range(m)]
+                [mfp(model, bvar[i]) for i in range(m)]
             )
             print "V(x)=max(Ax+b):"
             print "A=" + str(A_cand)
@@ -188,3 +200,7 @@ def stability_search1(phi, xsys, m):
 
 
         fsolver.pop()
+
+    # max iterations reached
+    print 'Max iterations reached'
+    return None

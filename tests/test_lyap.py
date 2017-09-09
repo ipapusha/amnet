@@ -42,7 +42,8 @@ class TestLyap(unittest.TestCase):
         )
 
         # look for a Lyapunov function
-        amnet.lyap.stability_search1(phi, xsys, 4)
+        #amnet.lyap.stability_search1(phi, xsys, 10)
+        amnet.lyap.stability_search1(phi, xsys, 4)  # enough for Metzler sys
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestLyap)
