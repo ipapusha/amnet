@@ -24,9 +24,15 @@ class TestLyap(unittest.TestCase):
         h = 0.01               # sampling rate
         assert 2.0*np.pi/wn >= 2.0 * h, 'Nyquist is unhappy'
 
-        Ac = np.array([[0, 1], [-wn*wn, -2*zeta*wn]])
+        # damped oscillator
+        #Ac = np.array([[0, 1], [-wn*wn, -2*zeta*wn]])
+        #Ad = expm(h * Ac)
+
+        # known Metzler system
+        Ac = np.array([[-15, 12], [4, -25]])
         Ad = expm(h * Ac)
-        assert all([abs(ev) < 1.0 for ev in eigvals(Ad)])
+
+        assert all([abs(ev) < 0.9 for ev in eigvals(Ad)])
 
         xsys = amnet.Variable(2, name='xsys')
         phi = amnet.AffineTransformation(

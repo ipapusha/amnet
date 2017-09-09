@@ -4,10 +4,24 @@ from amnet.util import foldl, r2f, mfp
 
 import z3
 
-def _max2_z3(x, y): return z3.If(x <= y, y, x)
+def _max2_z3(x, y):
+    return z3.If(x <= y, y, x)
+
 def _maxN_z3(xs):
     assert len(xs) >= 1
     return foldl(_max2_z3, xs[0], xs[1:])
+
+def _abs_z3(x):
+    return _max2_z3(x, -x)
+
+def _normL1_z3(xs):
+    assert len(xs) >= 1
+    return z3.Sum([_abs_z3(x) for x in xs])
+
+def _normLinf_z3(xs):
+    assert len(xs) >= 1
+    return _maxN_z3([_abs_z3(x) for x in xs])
+
 
 
 def stability_search1(phi, xsys, m):
@@ -27,7 +41,7 @@ def stability_search1(phi, xsys, m):
 
     # 0. Initialize
     print 'Initializing stability_search1'
-    MAX_ITER = 20
+    MAX_ITER = 50
 
     # init counterexample set
     Xc = list()
@@ -67,11 +81,13 @@ def stability_search1(phi, xsys, m):
                     z3.Sum(
                         [Avar[i][j] * xk[j] for j in range(n) if xk[j] != 0]
                     )
+                    + bvar[i]
                 )
                 Vk_next_terms.append(
                     z3.Sum(
                         [Avar[i][j] * xk_next[j] for j in range(n) if xk_next[j] != 0]
                     )
+                    + bvar[i]
                 )
             Vk_expr = _maxN_z3(Vk_terms)
             Vk_next_expr = _maxN_z3(Vk_next_terms)
@@ -86,26 +102,32 @@ def stability_search1(phi, xsys, m):
             if not all(xk == 0):
                 esolver.add(Vk > 0)
                 #esolver.add(Vk_next - Vk < 0)
-                esolver.add(Vk_next <= 0.9*Vk)
+                # CONDITIONING: impose minimum decay rate
+                esolver.add(Vk_next <= 0.99*Vk)
             else:
                 esolver.add(Vk == 0)
 
+            # CONDITIONING: impose upper bound on b
+            esolver.add(_normL1_z3(bvar) <= 10)
+
         # find a candidate Lyapunov function
-        if esolver.check():
+        if esolver.check() == z3.sat:
             print 'iter=%s: Found new Lyapunov Function' % iter
-            print 'esolver=%s' % esolver
+            #print 'esolver=%s' % esolver
             model = esolver.model()
             A_cand = np.array(
                 [[mfp(model, Avar[i][j]) for j in range(n)] for i in range(m)]
             )
             b_cand = np.array(
-                [mfp(model, bvar[j]) for j in range(n)]
+                [mfp(model, bvar[j]) for i in range(m)]
             )
             print "V(x)=max(Ax+b):"
             print "A=" + str(A_cand)
             print "b=" + str(b_cand)
         else:
             print 'iter=%s: Stability unknown, exiting' % iter
+
+            esolver.pop()
             return None
 
         esolver.pop()
@@ -119,8 +141,7 @@ def stability_search1(phi, xsys, m):
         x = enc.get_symbol(xsys)
 
         # encode Vx
-        Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
-        #Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n)]) for i in range(m)]
+        Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n)]) + b_cand[i] for i in range(m)]
         Vx_expr = _maxN_z3(Vx_terms)
         Vx = z3.Real('vx')
         fsolver.add(Vx == Vx_expr)
@@ -129,8 +150,7 @@ def stability_search1(phi, xsys, m):
         x_next = enc.get_symbol(phi)
 
         # encode Vx_next
-        Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n) if A_cand[i][j] != 0]) for i in range(m)]
-        #Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n)]) for i in range(m)]
+        Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n)]) + b_cand[i] for i in range(m)]
         Vx_next_expr = _maxN_z3(Vx_next_terms)
         Vx_next = z3.Real('vx_next')
         fsolver.add(Vx_next == Vx_next_expr)
@@ -139,10 +159,14 @@ def stability_search1(phi, xsys, m):
         fsolver.add(z3.Not(x==0))
         fsolver.add(z3.Not(z3.And(Vx > 0, Vx_next - Vx < 0)))
 
+        # CONDITIONING: only care about small counterexamples
+        fsolver.add(_normL1_z3(x) <= 5)
+        fsolver.add(_normL1_z3(x) >= 0.5)
+
         # look for a counterexample
-        if fsolver.check():
+        if fsolver.check() == z3.sat:
             print 'iter=%s: Found new Counterexample' % iter
-            print 'fsolver=%s' % fsolver
+            #print 'fsolver=%s' % fsolver
             fmodel = fsolver.model()
             xc = np.array([mfp(fmodel, x[j]) for j in range(n)])
             Xc.append(xc)
