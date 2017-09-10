@@ -39,6 +39,18 @@ def make_stack(phi_list):
         return phi_list[0]
     return amnet.Stack(phi_list[0], make_stack(phi_list[1:]))
 
+def make_add(x, y):
+    assert x.outdim == y.outdim
+    n = x.outdim
+
+    xy = amnet.Stack(x, y)
+
+    return amnet.AffineTransformation(
+        np.concatenate((np.eye(n), np.eye(n)), axis=1),
+        xy,
+        np.zeros(n)
+    )
+
 
 ################################################################################
 # Gates from Table 2
