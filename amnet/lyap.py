@@ -222,10 +222,10 @@ def disprove_maxaff_local_lyapunov(phi, xsys, A, b):
     Vc0 = z3.Real('vc0')
     Vc1 = z3.Real('vc1')
     Vc0_expr = _maxN_z3(
-        [[A[i][j] * xc0[j] for j in range(n)] + b[i] for i in range(m)]
+        [z3.Sum([A[i][j] * xc0[j] for j in range(n)]) + b[i] for i in range(m)]
     )
     Vc1_expr = _maxN_z3(
-        [[A[i][j] * xc1[j] for j in range(n)] + b[i] for i in range(m)]
+        [z3.Sum([A[i][j] * xc1[j] for j in range(n)]) + b[i] for i in range(m)]
     )
     fsolver.add(Vc0 == Vc0_expr)
     fsolver.add(Vc1 == Vc1_expr)
@@ -238,6 +238,7 @@ def disprove_maxaff_local_lyapunov(phi, xsys, A, b):
 
     # condition 1
     if np.max(b) > 0:
+        print 'Not Lyapunov (zero)'
         xc = np.zeros(n)
         return xc
 
@@ -249,21 +250,10 @@ def disprove_maxaff_local_lyapunov(phi, xsys, A, b):
 
     if fsolver.check() == z3.sat:
         model = fsolver.model()
+        xc  = np.array([mfp(model, xc0[j]) for j in range(n)])
+        xcn = np.array([mfp(model, xc1[j]) for j in range(n)])
         print 'Not Lyapunov (radially unbound)'
-        xc = np.array([mfp(model, xc0[j]) for j in range(n)])
-        return xc
-
-    fsolver.pop()
-
-    # condition 3
-    fsolver.push()
-    fsolver.add(_normL1_z3(xc0) <= 1)
-    fsolver.add(z3.Not(Vc1 <= 0.99*Vc0))
-
-    if fsolver.check() == z3.sat:
-        model = fsolver.model()
-        print 'Not Lyapunov (decrement)'
-        xc = np.array([mfp(model, xc0[j]) for j in range(n)])
+        print '(xc, xn) = (%s, %s)' % (str(xc), str(xcn))
         return xc
 
     fsolver.pop()
@@ -281,10 +271,23 @@ def disprove_maxaff_local_lyapunov(phi, xsys, A, b):
     #
     # fsolver.pop()
 
+    # condition 3
+    fsolver.push()
+    fsolver.add(_normL1_z3(xc0) <= 1)
+    fsolver.add(z3.Not(Vc1 <= 0.99*Vc0))
+
+    if fsolver.check() == z3.sat:
+        model = fsolver.model()
+        xc  = np.array([mfp(model, xc0[j]) for j in range(n)])
+        xcn = np.array([mfp(model, xc1[j]) for j in range(n)])
+        print 'Not Lyapunov (decrement)'
+        print '(xc, xn) = (%s, %s)' % (str(xc), str(xcn))
+        return xc
+
+    fsolver.pop()
+
     # all conditions have been met, this is a Lyapunov function
     return None
-
-
 
 
 ################################################################################
