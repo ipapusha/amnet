@@ -189,6 +189,105 @@ def stability_search1(phi, xsys, m):
     return None
 
 ################################################################################
+# local solver
+################################################################################
+
+
+def disprove_maxaff_local_lyapunov(phi, xsys, A, b):
+    """
+    Returns None if V(x) = max(Ax+b) is a local 
+    Lyapunov function for the autonomous system
+    x(t+1) = phi(x(t))
+    
+    Otherwise, returns a counter example xc
+    e.g. at which !(V(phi(xc)) <= 0.99 V(xc))
+    """
+    (m, n) = A.shape
+    assert len(b) == m
+    assert phi.outdim == n
+    assert xsys.outdim == n  # reference to input variable
+    assert n >= 1
+    assert m >= 1
+
+    # encode the dynamics network
+    fsolver = z3.Solver()
+    enc = amnet.smt.SmtEncoder(phi, solver=fsolver)
+    enc.init_tree()
+
+    # references to z3 input and output variables
+    xc0 = enc.get_symbol(xsys)
+    xc1 = enc.get_symbol(phi)
+
+    # encode V(xc0) and V(xc1)
+    Vc0 = z3.Real('vc0')
+    Vc1 = z3.Real('vc1')
+    Vc0_expr = _maxN_z3(
+        [[A[i][j] * xc0[j] for j in range(n)] + b[i] for i in range(m)]
+    )
+    Vc1_expr = _maxN_z3(
+        [[A[i][j] * xc1[j] for j in range(n)] + b[i] for i in range(m)]
+    )
+    fsolver.add(Vc0 == Vc0_expr)
+    fsolver.add(Vc1 == Vc1_expr)
+
+    # V is a local Lyapunov function if, for all x in S
+    # 1) V(0) == 0
+    # 2) x != 0 -> V(x) > 0
+    # 3) V(phi(x)) <= 0.99*V(x)
+    # 4) V is radially unbounded
+
+    # condition 1
+    if np.max(b) > 0:
+        xc = np.zeros(n)
+        return xc
+
+    # condition 4 (<-> reformulate to just on the boundary)
+    #             (therefore, includes condition 2)
+    fsolver.push()
+    fsolver.add(_normL1_z3(xc0) == 1)
+    fsolver.add(z3.Not(Vc0 > 0))
+
+    if fsolver.check() == z3.sat:
+        model = fsolver.model()
+        print 'Not Lyapunov (radially unbound)'
+        xc = np.array([mfp(model, xc0[j]) for j in range(n)])
+        return xc
+
+    fsolver.pop()
+
+    # condition 3
+    fsolver.push()
+    fsolver.add(_normL1_z3(xc0) <= 1)
+    fsolver.add(z3.Not(Vc1 <= 0.99*Vc0))
+
+    if fsolver.check() == z3.sat:
+        model = fsolver.model()
+        print 'Not Lyapunov (decrement)'
+        xc = np.array([mfp(model, xc0[j]) for j in range(n)])
+        return xc
+
+    fsolver.pop()
+
+    # condition 2
+    # fsolver.push()
+    # fsolver.add(z3.Not(xc0 == 0))
+    # fsolver.add(z3.Not(Vc0 > 0))
+    #
+    # if fsolver.check() == z3.sat:
+    #     model = fsolver.model()
+    #     print 'Not Lyapunov (>0)'
+    #     xc = np.array([mfp(model, xc0[j]) for j in range(n)])
+    #     return xc
+    #
+    # fsolver.pop()
+
+    # all conditions have been met, this is a Lyapunov function
+    return None
+
+
+
+
+################################################################################
 # convex-based solver
 # incomplete
 ################################################################################
@@ -204,6 +303,8 @@ def get_candidate_lyapunov(Xc, Xc_next, m, n):
     cons = list()
     for xc, xc_next in itertools.izip(Xc, Xc_next):
         cvxpy.max_entries(A*xc) # TODO: check multiplication
+
+    pass
 
 
 def stability_search2(phi, xsys, m):
@@ -230,3 +331,5 @@ def stability_search2(phi, xsys, m):
     # go around the Linf 1-ball
     for xcpoint in itertools.product([-1, 1], repeat=n):
         Xc.append(np.array(xcpoint))
+
+    pass
