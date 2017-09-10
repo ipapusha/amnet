@@ -193,7 +193,7 @@ def stability_search1(phi, xsys, m):
 ################################################################################
 
 
-def disprove_maxaff_local_lyapunov(phi, xsys, A, b):
+def find_local_counterexample(phi, xsys, A, b):
     """
     Returns None if V(x) = max(Ax+b) is a local 
     Lyapunov function for the autonomous system

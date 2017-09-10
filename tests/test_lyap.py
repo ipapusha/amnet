@@ -72,7 +72,7 @@ class TestLyap(unittest.TestCase):
         # a simple Lyapunov function
         Astar = np.array([[1, 1], [1, -1], [-1, 1], [-1, -1]])
         bstar = np.zeros(4)
-        xc = amnet.lyap.disprove_maxaff_local_lyapunov(phi, xsys, Astar, bstar)
+        xc = amnet.lyap.find_local_counterexample(phi, xsys, Astar, bstar)
 
         # simple Lyapunov function works
         self.assertTrue(xc is None)
