@@ -19,20 +19,23 @@ class TestAtoms(unittest.TestCase):
             axis=0
         )
 
-    def test_make_add(self):
+    def test_make_add_make_sub(self):
         xy = amnet.Variable(2, name='xy')
         x = amnet.select(xy, 0)
         y = amnet.select(xy, 1)
         phi_add = amnet.atoms.make_add(x, y)
+        phi_sub = amnet.atoms.make_sub(x, y)
 
         # true add
         def true_add(xv, yv): return xv + yv
+        def true_sub(xv, yv): return xv - yv
 
         # implemented add
         for xv in self.floatvals:
             for yv in self.floatvals:
                 xyv = np.array([xv, yv])
                 self.assertEqual(phi_add.eval(xyv), true_add(xv, yv))
+                self.assertEqual(phi_sub.eval(xyv), true_sub(xv, yv))
 
     def test_make_max2(self):
         x = amnet.Variable(2, name='x')
