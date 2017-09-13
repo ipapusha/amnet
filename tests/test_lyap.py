@@ -16,7 +16,7 @@ class TestLyap(unittest.TestCase):
     def setUpClass(cls):
         pass
 
-    def stability_search1(self):
+    def test_stability_search1(self):
         # generate a known stable linear system
         n = 2
         zeta = 0.2             # damping factor

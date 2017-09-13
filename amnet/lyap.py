@@ -7,6 +7,9 @@ import cvxpy
 
 import itertools
 
+_DEBUG_SMT2 = True
+
+
 def _max2_z3(x, y):
     return z3.If(x <= y, y, x)
 
@@ -110,6 +113,16 @@ def stability_search1(phi, xsys, m):
             for i in range(m):
                 esolver.add(_normL1_z3(Avar[i]) <= 10)
 
+        if _DEBUG_SMT2:
+            filename = 'log/esolver_%s.smt2' % iter
+            file = open(filename, 'w')
+            print 'Writing %s...' % filename,
+            file.write('(set-logic QF_LRA)\n')
+            file.write(esolver.to_smt2())
+            file.write('(get-model)')
+            print 'done!'
+            file.close()
+
         # find a candidate Lyapunov function
         if esolver.check() == z3.sat:
             print 'iter=%s: Found new Lyapunov Function' % iter
@@ -162,6 +175,16 @@ def stability_search1(phi, xsys, m):
         # CONDITIONING: only care about small counterexamples
         fsolver.add(_normL1_z3(x) <= 5)
         fsolver.add(_normL1_z3(x) >= 0.5)
+
+        if _DEBUG_SMT2:
+            filename = 'log/fsolver_%s.smt2' % iter
+            file = open(filename, 'w')
+            print 'Writing %s...' % filename,
+            file.write('(set-logic QF_LRA)\n')
+            file.write(fsolver.to_smt2())
+            file.write('(get-model)\n')
+            print 'done!'
+            file.close()
 
         # look for a counterexample
         if fsolver.check() == z3.sat:
