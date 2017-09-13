@@ -126,6 +126,9 @@ class SmtEncoder(object):
             # and bind it to the constant value
             self.symbols[psi.outvar] = [z3.RealVal(ci) for ci in psi.c]
         elif isinstance(psi, amnet.Stack):
+            print 'Init stack: ' + str(psi.outvar)
+            print 'S1 = ' + str(psi.x)
+            print 'S2 = ' + str(psi.y)
             self._init_tree(psi.x)
             self._init_tree(psi.y)
 
