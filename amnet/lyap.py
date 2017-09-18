@@ -57,8 +57,11 @@ def stability_search1(phi, xsys, m):
         Xc.append(np.array(xcpoint))
 
     # init SMT solver
-    esolver = z3.Solver()
-    fsolver = z3.Solver()
+    z3.set_param('auto_config', False)
+    z3.set_param('smt.case_split', 4)
+    esolver = z3.SolverFor('QF_LRA')
+    fsolver = z3.SolverFor('QF_LRA')
+
     enc = amnet.smt.SmtEncoder(phi, solver=fsolver)
     enc.init_tree()
 
@@ -95,13 +98,12 @@ def stability_search1(phi, xsys, m):
             esolver.add(Vk_next == Vk_next_expr)
 
             # nonnegativity/decrement of V
-            if not all(xk == 0):
-                esolver.add(Vk > 0)
-                #esolver.add(Vk_next - Vk < 0)
-                # CONDITIONING: impose minimum decay rate
-                esolver.add(Vk_next <= 0.99*Vk)
-            else:
+            if all(xk == 0):
                 esolver.add(Vk == 0)
+            else:
+                # CONDITIONING: impose minimum decay rate
+                esolver.add(Vk > 0)
+                esolver.add(Vk_next < 0.99 * Vk)
 
             # CONDITIONING: impose upper bound on b
             esolver.add(_normL1_z3(bvar) <= 10)
@@ -175,6 +177,9 @@ def stability_search1(phi, xsys, m):
         # CONDITIONING: only care about small counterexamples
         fsolver.add(_normL1_z3(x) <= 5)
         fsolver.add(_normL1_z3(x) >= 0.5)
+
+        # CONDITIONING: counterexample should not be zero
+        fsolver.add([x[j] != 0 for j in range(n)])
 
         if _DEBUG_SMT2:
             filename = 'log/fsolver_%s.smt2' % iter

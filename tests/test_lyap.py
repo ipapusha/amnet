@@ -37,8 +37,9 @@ class TestLyap(unittest.TestCase):
         for Ad in [cls.Ad_osc, cls.Ad_met, cls.Ad_diag]:
             assert all([abs(ev) < 0.9 for ev in eigvals(Ad)])
 
-    def stability_search1(self):
-        Ad = self.Ad_osc
+    def test_stability_search1(self):
+        #Ad = self.Ad_osc
+        Ad = self.Ad_met
         (n, _) = Ad.shape
         assert n == 2
 
@@ -56,7 +57,7 @@ class TestLyap(unittest.TestCase):
     def cvxpy(self):
         pass
 
-    def test_disprove_maxaff_local_lyapunov(self):
+    def disprove_maxaff_local_lyapunov(self):
         # a simple system
         Ad = self.Ad_diag
         (n, _) = Ad.shape
