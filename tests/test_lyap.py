@@ -37,6 +37,12 @@ class TestLyap(unittest.TestCase):
         for Ad in [cls.Ad_osc, cls.Ad_met, cls.Ad_diag]:
             assert all([abs(ev) < 0.9 for ev in eigvals(Ad)])
 
+        # set up global z3 parameters
+        # parameters from https://stackoverflow.com/a/12516269
+        z3.set_param('auto_config', False)
+        z3.set_param('smt.case_split', 5)
+        z3.set_param('smt.relevancy', 2)
+
     def test_stability_search1(self):
         #Ad = self.Ad_osc
         Ad = self.Ad_met

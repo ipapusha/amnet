@@ -57,8 +57,6 @@ def stability_search1(phi, xsys, m):
         Xc.append(np.array(xcpoint))
 
     # init SMT solver
-    z3.set_param('auto_config', False)
-    z3.set_param('smt.case_split', 4)
     esolver = z3.SolverFor('QF_LRA')
     fsolver = z3.SolverFor('QF_LRA')
 
@@ -103,6 +101,7 @@ def stability_search1(phi, xsys, m):
             else:
                 # CONDITIONING: impose minimum decay rate
                 esolver.add(Vk > 0)
+                esolver.add(Vk_next > 0)
                 esolver.add(Vk_next < 0.99 * Vk)
 
             # CONDITIONING: impose upper bound on b
@@ -177,9 +176,6 @@ def stability_search1(phi, xsys, m):
         # CONDITIONING: only care about small counterexamples
         fsolver.add(_normL1_z3(x) <= 5)
         fsolver.add(_normL1_z3(x) >= 0.5)
-
-        # CONDITIONING: counterexample should not be zero
-        fsolver.add([x[j] != 0 for j in range(n)])
 
         if _DEBUG_SMT2:
             filename = 'log/fsolver_%s.smt2' % iter
