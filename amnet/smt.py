@@ -50,7 +50,7 @@ class SmtEncoder(object):
         if isinstance(psi, amnet.Variable):
             #return self.get_unique_varname(prefix='xv')
             return self.get_unique_varname(prefix=psi.name)
-        elif isinstance(psi, amnet.AffineTransformation):
+        elif isinstance(psi, amnet.Affine):
             return self.get_unique_varname(prefix='ya')
         elif isinstance(psi, amnet.Mu):
             return self.get_unique_varname(prefix='wm')
@@ -80,7 +80,7 @@ class SmtEncoder(object):
         if isinstance(psi, amnet.Variable):
             # do not bind the input of a variable
             pass
-        elif isinstance(psi, amnet.AffineTransformation):
+        elif isinstance(psi, amnet.Affine):
             self._init_tree(psi.x)
 
             xv = self.symbols[psi.x.outvar]

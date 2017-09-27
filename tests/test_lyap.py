@@ -52,7 +52,7 @@ class TestLyap(unittest.TestCase):
         assert n == 2
 
         xsys = amnet.Variable(n, name='xsys')
-        phi = amnet.AffineTransformation(
+        phi = amnet.Affine(
             Ad,
             xsys,
             np.zeros(n)
@@ -72,7 +72,7 @@ class TestLyap(unittest.TestCase):
         assert n == 2
 
         xsys = amnet.Variable(n, name='xsys')
-        phi = amnet.AffineTransformation(
+        phi = amnet.Affine(
             Ad,
             xsys,
             np.zeros(n)

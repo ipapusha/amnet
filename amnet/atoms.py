@@ -3,41 +3,44 @@ import amnet
 
 
 ################################################################################
-# utility methods
-################################################################################
-
-def _validdims_mu(x, y, z):
-    return (x.outdim == y.outdim) and \
-           (z.outdim == 1)
-
-
-def _validdims_gate(x, y, z1, z2):
-    return (x.outdim == y.outdim) and \
-           (z1.outdim == 1) and \
-           (z2.outdim == 1)
-
-
-################################################################################
 # simple affine transformations
 ################################################################################
 
-def make_neg(x):
-    assert x.outdim >= 1
-    return amnet.AffineTransformation(
-        np.diag(-np.ones(x.outdim)),
-        x,
-        np.zeros(x.outdim)
+def select(phi, k):
+    """ returns kth component of phi """
+    assert (0 <= phi.outdim) and (k < phi.outdim)
+    return amnet.Linear(
+        np.eye(1, phi.outdim, k),
+        phi
     )
 
 
-def make_stack(phi_list):
-    assert not(isinstance(phi_list, amnet.Amn)) # has to be a list of Amns
+def identity(phi):
+    """returns phi, wrapped in an identity affine transformation"""
+    return amnet.Linear(
+        np.eye(phi.outdim, phi.outdim),
+        phi
+    )
+
+
+def neg(phi):
+    """returns the negative of phi """
+    assert phi.outdim >= 1
+    return amnet.Linear(
+        np.diag(-np.ones(phi.outdim)),
+        phi
+    )
+
+
+def stack(phi_list):
+    """returns Stack(phi_list[0], Stack(phi_list[1], ...))"""
+    assert not(isinstance(phi_list, amnet.Amn))  # has to be a list of Amns
     assert len(phi_list) >= 1
     assert isinstance(phi_list[0], amnet.Amn)
 
     if len(phi_list) == 1:
         return phi_list[0]
-    return amnet.Stack(phi_list[0], make_stack(phi_list[1:]))
+    return amnet.Stack(phi_list[0], stack(phi_list[1:]))
 
 
 def make_add(x, y):
@@ -46,7 +49,7 @@ def make_add(x, y):
 
     xy = amnet.Stack(x, y)
 
-    return amnet.AffineTransformation(
+    return amnet.Affine(
         np.concatenate((np.eye(n), np.eye(n)), axis=1),
         xy,
         np.zeros(n)
@@ -58,13 +61,25 @@ def make_sub(x, y):
 
     xy = amnet.Stack(x, y)
 
-    return amnet.AffineTransformation(
+    return amnet.Affine(
         np.concatenate((np.eye(n), -np.eye(n)), axis=1),
         xy,
         np.zeros(n)
     )
 
+################################################################################
+# dimension checking methods
+################################################################################
 
+def _validdims_mu(x, y, z):
+    return (x.outdim == y.outdim) and \
+           (z.outdim == 1)
+
+
+def _validdims_gate(x, y, z1, z2):
+    return (x.outdim == y.outdim) and \
+           (z1.outdim == 1) and \
+           (z2.outdim == 1)
 
 ################################################################################
 # Gates from Table 2
@@ -140,7 +155,7 @@ def make_ge(x, y, z):
     return amnet.Mu(
         x,
         y,
-        make_neg(z)
+        neg(z)
     )
 
 
@@ -149,7 +164,7 @@ def make_lt(x, y, z):
     return make_not(
         x,
         y,
-        make_neg(z)
+        neg(z)
     )
 
 
@@ -168,7 +183,7 @@ def make_eq(x, y, z):
         x,
         y,
         z,
-        make_neg(z)
+        neg(z)
     )
 
 
@@ -178,7 +193,7 @@ def make_neq(x, y, z):
         y,
         x,
         z,
-        make_neg(z)
+        neg(z)
     )
 
 
@@ -188,7 +203,7 @@ def make_neq(x, y, z):
 def make_const(b, invar):
     outdim = len(b)
     indim = invar.outdim
-    return amnet.AffineTransformation(
+    return amnet.Affine(
         np.zeros((outdim, indim)),
         invar,
         b
@@ -206,13 +221,13 @@ def make_relu(phi):
 
     # populate each component
     for i in range(n):
-        a1 = amnet.AffineTransformation(
+        a1 = amnet.Affine(
             np.eye(1, n, i),
             phi,
             np.array([0])
         )
-        a2 = amnet.Constant(np.array([0]))
-        a3 = amnet.AffineTransformation(
+        a2 = amnet.Constant(phi, np.array([0]))
+        a3 = amnet.Affine(
             -np.eye(1, n, i),
             phi,
             np.array([0])
@@ -223,23 +238,23 @@ def make_relu(phi):
         assert relus[i].outdim == 1
 
     # return a stack of all components
-    return make_stack(relus)
+    return stack(relus)
 
 
 def make_max2(phi):
     assert phi.outdim == 2
 
-    a1 = amnet.AffineTransformation(
+    a1 = amnet.Affine(
         np.array([[1, 0]]),
         phi,
         np.array([0])
     )
-    a2 = amnet.AffineTransformation(
+    a2 = amnet.Affine(
         np.array([[0, 1]]),
         phi,
         np.array([0])
     )
-    a3 = amnet.AffineTransformation(
+    a3 = amnet.Affine(
         np.array([[-1, 1]]),
         phi,
         np.array([0])
@@ -252,7 +267,7 @@ def make_max3(phi):
     assert phi.outdim == 3
 
     phi0 = amnet.select(phi, 0)
-    phi12 = amnet.AffineTransformation(
+    phi12 = amnet.Affine(
         np.eye(2, 3, 1),
         phi,
         np.zeros(2)
@@ -268,12 +283,12 @@ def make_max4(phi):
     """ uses fewer mus than make_max(phi)"""
     assert phi.outdim == 4
 
-    phi01 = amnet.AffineTransformation(
+    phi01 = amnet.Affine(
         np.eye(2, 4, 0),
         phi,
         np.zeros(2)
     )
-    phi23 = amnet.AffineTransformation(
+    phi23 = amnet.Affine(
         np.eye(2, 4, 2),
         phi,
         np.zeros(2)
@@ -292,7 +307,7 @@ def make_max(phi):
     if n == 2: return make_max2(phi)
 
     phi_0 = amnet.select(phi, 0)
-    phi_rest = amnet.AffineTransformation(
+    phi_rest = amnet.Affine(
         np.eye(n-1, n, 1),
         phi,
         np.zeros(n-1)
@@ -311,7 +326,7 @@ def make_max_aff(A, b, phi):
     assert len(b) == m
     assert phi.outdim == n
 
-    phi_aff = amnet.AffineTransformation(
+    phi_aff = amnet.Affine(
         A,
         phi,
         b
@@ -331,17 +346,17 @@ def make_triplexer(phi, a, b, c, d, e, f):
 
     # Layer 1 weights
     for i in range(3):
-        x[i] = amnet.AffineTransformation(
+        x[i] = amnet.Affine(
             np.array(a[i]).reshape((1, 1)),
             phi,
             np.array(b[i]).reshape((1,))
         )
-        y[i] = amnet.AffineTransformation(
+        y[i] = amnet.Affine(
             np.array(c[i]).reshape((1, 1)),
             phi,
             np.array(d[i]).reshape((1,))
         )
-        z[i] = amnet.AffineTransformation(
+        z[i] = amnet.Affine(
             np.array(e[i]).reshape((1, 1)),
             phi,
             np.array(f[i]).reshape((1,))
@@ -356,17 +371,17 @@ def make_triplexer(phi, a, b, c, d, e, f):
         )
 
     # Layer 2 weights
-    x[3] = amnet.AffineTransformation(
+    x[3] = amnet.Affine(
         np.array(a[3]).reshape((1, 1)),
         w[1],
         np.array(b[3]).reshape((1,))
     )
-    y[3] = amnet.AffineTransformation(
+    y[3] = amnet.Affine(
         np.array(c[3]).reshape((1, 1)),
         w[2],
         np.array(d[3]).reshape((1,))
     )
-    z[3] = amnet.AffineTransformation(
+    z[3] = amnet.Affine(
         np.array(e[3]).reshape((1, 1)),
         w[0],
         np.array(f[3]).reshape((1,))
