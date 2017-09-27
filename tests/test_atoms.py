@@ -76,7 +76,7 @@ class TestAtoms(unittest.TestCase):
 
         y4 = x
 
-        ystack = amnet.atoms.stack([y1, y2, y3, y4])
+        ystack = amnet.atoms.stack_list([y1, y2, y3, y4])
         self.assertEqual(ystack.outdim, 4+3)
         self.assertEqual(ystack.indim, 3)
 

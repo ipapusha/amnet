@@ -32,39 +32,52 @@ def neg(phi):
     )
 
 
-def stack(phi_list):
-    """returns Stack(phi_list[0], Stack(phi_list[1], ...))"""
-    assert not(isinstance(phi_list, amnet.Amn))  # has to be a list of Amns
-    assert len(phi_list) >= 1
-    assert isinstance(phi_list[0], amnet.Amn)
-
-    if len(phi_list) == 1:
-        return phi_list[0]
-    return amnet.Stack(phi_list[0], stack(phi_list[1:]))
+def stack2(x, y):
+    return amnet.Stack(x, y)
 
 
-def make_add(x, y):
+def stack_list(phi_list):
+    """returns Stack(...Stack(phi_list[0], phi_list[1]), ... phi_list[-1]) """
+    assert _valid_nonempty_Amn_list(phi_list)
+    return amnet.util.foldl(stack2, phi_list[0], phi_list[1:])
+
+# alternative implementation of stack_list
+# (previously make_stack(phi_list))
+#
+# def stack_list(phi_list):
+#     assert _valid_nonempty_Amn_list(phi_list)
+#     if len(phi_list) == 1:
+#         return phi_list[0]
+#     return amnet.Stack(phi_list[0], stack_list(phi_list[1:]))
+
+
+def add2(x, y):
     assert x.outdim == y.outdim
     n = x.outdim
 
     xy = amnet.Stack(x, y)
 
-    return amnet.Affine(
+    return amnet.Linear(
         np.concatenate((np.eye(n), np.eye(n)), axis=1),
-        xy,
-        np.zeros(n)
+        xy
     )
 
-def make_sub(x, y):
+
+def add_list(phi_list):
+    """returns (...(phi_list[0] + phi_list[1]) + ...) + phi_list[len(phi_list)]"""
+    assert _valid_nonempty_Amn_list(phi_list)
+    return amnet.util.foldl(add2, phi_list[0], phi_list[1:])
+
+
+def subtract2(x, y):
     assert x.outdim == y.outdim
     n = x.outdim
 
     xy = amnet.Stack(x, y)
 
-    return amnet.Affine(
+    return amnet.Linear(
         np.concatenate((np.eye(n), -np.eye(n)), axis=1),
-        xy,
-        np.zeros(n)
+        xy
     )
 
 ################################################################################
@@ -81,11 +94,18 @@ def _validdims_gate(x, y, z1, z2):
            (z1.outdim == 1) and \
            (z2.outdim == 1)
 
+
+def _valid_nonempty_Amn_list(phi_list):
+    return (not isinstance(phi_list, amnet.Amn)) and \
+           (len(phi_list) >= 1) and \
+           (isinstance(phi_list[0], amnet.Amn))
+
+
 ################################################################################
 # Gates from Table 2
 ################################################################################
 
-def make_and(x, y, z1, z2):
+def gate_and(x, y, z1, z2):
     assert _validdims_gate(x, y, z1, z2)
     return amnet.Mu(
         amnet.Mu(
@@ -98,7 +118,7 @@ def make_and(x, y, z1, z2):
     )
 
 
-def make_or(x, y, z1, z2):
+def gate_or(x, y, z1, z2):
     assert _validdims_gate(x, y, z1, z2)
     return amnet.Mu(
         x,
@@ -111,7 +131,7 @@ def make_or(x, y, z1, z2):
     )
 
 
-def make_not(x, y, z):
+def gate_not(x, y, z):
     assert _validdims_mu(x, y, z)
     return amnet.Mu(
         y,
@@ -120,7 +140,7 @@ def make_not(x, y, z):
     )
 
 
-def make_xor(x, y, z1, z2):
+def gate_xor(x, y, z1, z2):
     assert _validdims_gate(x, y, z1, z2)
     return amnet.Mu(
         amnet.Mu(
@@ -141,7 +161,7 @@ def make_xor(x, y, z1, z2):
 # Comparisons from Table 2
 ################################################################################
 
-def make_le(x, y, z):
+def cmp_le(x, y, z):
     assert _validdims_mu(x, y, z)
     return amnet.Mu(
         x,
@@ -150,7 +170,7 @@ def make_le(x, y, z):
     )
 
 
-def make_ge(x, y, z):
+def cmp_ge(x, y, z):
     assert _validdims_mu(x, y, z)
     return amnet.Mu(
         x,
@@ -159,27 +179,27 @@ def make_ge(x, y, z):
     )
 
 
-def make_lt(x, y, z):
+def cmp_lt(x, y, z):
     assert _validdims_mu(x, y, z)
-    return make_not(
+    return gate_not(
         x,
         y,
         neg(z)
     )
 
 
-def make_gt(x, y, z):
+def cmp_gt(x, y, z):
     assert _validdims_mu(x, y, z)
-    return make_not(
+    return gate_not(
         x,
         y,
         z
     )
 
 
-def make_eq(x, y, z):
+def cmp_eq(x, y, z):
     assert _validdims_mu(x, y, z)
-    return make_and(
+    return gate_and(
         x,
         y,
         z,
@@ -187,26 +207,13 @@ def make_eq(x, y, z):
     )
 
 
-def make_neq(x, y, z):
+def cmp_neq(x, y, z):
     assert _validdims_mu(x, y, z)
-    return make_and(
+    return gate_and(
         y,
         x,
         z,
         neg(z)
-    )
-
-
-################################################################################
-# deprecated
-################################################################################
-def make_const(b, invar):
-    outdim = len(b)
-    indim = invar.outdim
-    return amnet.Affine(
-        np.zeros((outdim, indim)),
-        invar,
-        b
     )
 
 
@@ -238,7 +245,7 @@ def make_relu(phi):
         assert relus[i].outdim == 1
 
     # return a stack of all components
-    return stack(relus)
+    return stack_list(relus)
 
 
 def make_max2(phi):

@@ -16,8 +16,8 @@ def make_vgc(alpha):
     edot  = amnet.Affine(np.array([[0, 1]]), x, np.zeros(1))
     neg_edot = amnet.Affine(np.array([[0, -1]]), x, np.zeros(1))
 
-    return amnet.atoms.make_or(
-        amnet.atoms.make_or(
+    return amnet.atoms.gate_or(
+        amnet.atoms.gate_or(
             zero1,
             ae,
             neg_e,
