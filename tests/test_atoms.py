@@ -34,6 +34,33 @@ class TestAtoms(unittest.TestCase):
             self.assertEqual(x0.eval(xinp), xv0)
             self.assertEqual(x1.eval(xinp), xv1)
 
+    def test_to_from_list(self):
+        x = amnet.Variable(2, name='x')
+
+        w = np.array([[1, 2], [3, 4], [5, 6]])
+        b = np.array([7, 8, 9])
+        y = amnet.Affine(
+            w,
+            x,
+            b
+        )
+
+        self.assertEqual(y.outdim, 3)
+
+        ylist = amnet.atoms.to_list(y)
+        self.assertEqual(len(ylist), y.outdim)
+
+        ytilde = amnet.atoms.from_list(ylist)
+        self.assertEqual(ytilde.outdim, y.outdim)
+
+        for (xv0, xv1) in product(self.floatvals, repeat=2):
+            xinp = np.array([xv0, xv1])
+            yv = y.eval(xinp)
+            ylv = np.array([yi.eval(xinp) for yi in ylist]).flatten()  # note the flatten!
+            ytv = ytilde.eval(xinp)
+            self.assertAlmostEqual(norm(yv - ylv), 0)
+            self.assertAlmostEqual(norm(yv - ytv), 0)
+
     def test_identity(self):
         x = amnet.Variable(2, name='x')
 
@@ -76,7 +103,7 @@ class TestAtoms(unittest.TestCase):
 
         y4 = x
 
-        ystack = amnet.atoms.stack_list([y1, y2, y3, y4])
+        ystack = amnet.atoms.from_list([y1, y2, y3, y4])
         self.assertEqual(ystack.outdim, 4+3)
         self.assertEqual(ystack.indim, 3)
 
@@ -93,22 +120,7 @@ class TestAtoms(unittest.TestCase):
             ytv = ystack_true(xinp)
             self.assertAlmostEqual(norm(ysv - ytv), 0)
 
-
-
-    def test_make_max2(self):
-        x = amnet.Variable(2, name='x')
-        phi_max2 = amnet.atoms.make_max2(x)
-
-        # true max2
-        def max2(x): return x[0] if x[0] > x[1] else x[1]
-
-        # implemented max2
-        for xv in self.floatvals:
-            for yv in self.floatvals:
-                xyv = np.array([xv, yv])
-                self.assertEqual(phi_max2.eval(xyv), max2(xyv))
-
-    def test_make_relu(self):
+    def test_relu(self):
         x = amnet.Variable(4, name='x')
         y = amnet.Variable(1, name='y')
         phi_relu = amnet.atoms.relu(x)
@@ -130,7 +142,7 @@ class TestAtoms(unittest.TestCase):
             s = relu(np.array([yv]))
             self.assertEqual(r, s)
 
-    def test_make_triplexer(self):
+    def test_triplexer(self):
         x = amnet.Variable(1, name='xv')
 
         np.random.seed(1)
@@ -142,7 +154,7 @@ class TestAtoms(unittest.TestCase):
             d = 3 * (2 * np.random.rand(4) - 1)
             e = 3 * (2 * np.random.rand(4) - 1)
             f = 3 * (2 * np.random.rand(4) - 1)
-            phi_tri = amnet.atoms.make_triplexer(x, a, b, c, d, e, f)
+            phi_tri = amnet.atoms.triplexer(x, a, b, c, d, e, f)
 
             xvals = 100 * (2 * np.random.rand(1000) - 1)
             for xv in xvals:

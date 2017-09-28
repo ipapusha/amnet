@@ -48,3 +48,15 @@ def foldr(f, z, xs):
         foldr(add2, arr[-1], arr[:-1]) == add2(1, add2(2, 3))
     """
     return z if len(xs) == 0 else f(xs[0], foldr(f, z, xs[1:]))
+
+
+def allsame(xs):
+    """
+    True if xs is the empty list or list with one element
+    True if all the components of xs are the same
+    False otherwise
+    """
+    if len(xs) <= 1:
+        return True
+
+    return all([x == xs[0] for x in xs[1:]])

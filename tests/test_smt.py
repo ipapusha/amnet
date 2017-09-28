@@ -183,7 +183,7 @@ class TestSmt(unittest.TestCase):
             d = 3 * (2 * np.random.rand(4) - 1)
             e = 3 * (2 * np.random.rand(4) - 1)
             f = 3 * (2 * np.random.rand(4) - 1)
-            phi_tri = amnet.atoms.make_triplexer(x, a, b, c, d, e, f)
+            phi_tri = amnet.atoms.triplexer(x, a, b, c, d, e, f)
 
             # do the smt encoding
             enc = amnet.smt.SmtEncoder(phi_tri)
