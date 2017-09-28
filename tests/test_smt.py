@@ -25,9 +25,9 @@ class TestSmt(unittest.TestCase):
     def test_SmtEncoder(self):
         xyz = amnet.Variable(3, name='xyz')
 
-        x = amnet.select(xyz, 0)
-        y = amnet.select(xyz, 1)
-        z = amnet.select(xyz, 2)
+        x = amnet.atoms.select(xyz, 0)
+        y = amnet.atoms.select(xyz, 1)
+        z = amnet.atoms.select(xyz, 2)
         w = amnet.Mu(x, y, z)
 
         enc = amnet.smt.SmtEncoder(w)
@@ -69,9 +69,9 @@ class TestSmt(unittest.TestCase):
     def test_SmtEncoder2(self):
         xyz = amnet.Variable(3, name='xyz')
 
-        x = amnet.select(xyz, 0)
-        y = amnet.select(xyz, 1)
-        z = amnet.select(xyz, 2)
+        x = amnet.atoms.select(xyz, 0)
+        y = amnet.atoms.select(xyz, 1)
+        z = amnet.atoms.select(xyz, 2)
         w = amnet.Mu(x, y, z)
 
         # do the smt encoding
@@ -94,9 +94,9 @@ class TestSmt(unittest.TestCase):
     def test_SmtEncoder3(self):
         xyz = amnet.Variable(3, name='xyz')
 
-        x = amnet.select(xyz, 0)
-        y = amnet.select(xyz, 1)
-        z = amnet.select(xyz, 2)
+        x = amnet.atoms.select(xyz, 0)
+        y = amnet.atoms.select(xyz, 1)
+        z = amnet.atoms.select(xyz, 2)
         w = amnet.Mu(x, y, z)
 
         # do the smt encoding
@@ -119,9 +119,9 @@ class TestSmt(unittest.TestCase):
     def test_SmtEncoder3(self):
         xyz = amnet.Variable(3, name='xyz')
 
-        x = amnet.select(xyz, 0)
-        y = amnet.select(xyz, 1)
-        z = amnet.select(xyz, 2)
+        x = amnet.atoms.select(xyz, 0)
+        y = amnet.atoms.select(xyz, 1)
+        z = amnet.atoms.select(xyz, 2)
         w = amnet.Mu(x, y, z)
 
         # do the smt encoding
@@ -145,9 +145,9 @@ class TestSmt(unittest.TestCase):
     def test_SmtEncoder_mu(self):
         xyz = amnet.Variable(3, name='xyzv')
 
-        x = amnet.select(xyz, 0)
-        y = amnet.select(xyz, 1)
-        z = amnet.select(xyz, 2)
+        x = amnet.atoms.select(xyz, 0)
+        y = amnet.atoms.select(xyz, 1)
+        z = amnet.atoms.select(xyz, 2)
         w = amnet.Mu(x, y, z)
 
         # do the smt encoding
