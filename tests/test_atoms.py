@@ -111,8 +111,8 @@ class TestAtoms(unittest.TestCase):
     def test_make_relu(self):
         x = amnet.Variable(4, name='x')
         y = amnet.Variable(1, name='y')
-        phi_relu = amnet.atoms.make_relu(x)
-        phi_reluy = amnet.atoms.make_relu(y)
+        phi_relu = amnet.atoms.relu(x)
+        phi_reluy = amnet.atoms.relu(y)
 
         # true relu
         def relu(x): return np.maximum(x, 0)

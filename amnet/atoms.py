@@ -9,6 +9,14 @@ import amnet
 def select(phi, k):
     """ returns kth component of phi """
     assert (0 <= phi.outdim) and (k < phi.outdim)
+
+    # optimization: prevent creating an affine transformation
+    #               if phi is one-dimensional
+    if phi.outdim == 1 and k == 0:
+        #print 'optimization: select'
+        return phi
+
+    # otherwise, select the appropriate component
     return amnet.Linear(
         np.eye(1, phi.outdim, k),
         phi
@@ -26,6 +34,7 @@ def identity(phi):
 def neg(phi):
     """returns the negative of phi """
     assert phi.outdim >= 1
+    # TODO: make more efficient by pe   eking inside Affine, Linear, Stack, and Mu
     return amnet.Linear(
         np.diag(-np.ones(phi.outdim)),
         phi
@@ -69,7 +78,7 @@ def add_list(phi_list):
     return amnet.util.foldl(add2, phi_list[0], phi_list[1:])
 
 
-def subtract2(x, y):
+def sub2(x, y):
     assert x.outdim == y.outdim
     n = x.outdim
 
@@ -221,91 +230,75 @@ def cmp_neq(x, y, z):
 # Methods from Table 1
 ################################################################################
 
-def make_relu(phi):
-    """ returns vector with ith component equal to max(phi_i, 0) """
-    n = phi.outdim
-    relus = [None for i in range(n)]
+def max2(x, y):
+    """ returns vector with ith component equal to max(x_i, y_i)"""
+    assert x.outdim == y.outdim
+    n = x.outdim
+    assert n >= 1
 
-    # populate each component
+    # references to internal components
+    xs = [select(x, i) for i in range(n)]
+    ys = [select(y, i) for i in range(n)]
+
+    # references to output components
+    maxs = [None] * n
+
     for i in range(n):
-        a1 = amnet.Affine(
-            np.eye(1, n, i),
-            phi,
-            np.array([0])
+        maxs[i] = amnet.Mu(
+            xs[i],
+            ys[i],
+            sub2(ys[i], xs[i])
         )
-        a2 = amnet.Constant(phi, np.array([0]))
-        a3 = amnet.Affine(
-            -np.eye(1, n, i),
-            phi,
-            np.array([0])
-        )
-        #print a1.indim, a2.indim, a3.indim
-        #print a1.outdim, a2.outdim, a3.outdim
-        relus[i] = amnet.Mu(a1, a2, a3)
-        assert relus[i].outdim == 1
+        assert maxs[i].outdim == 1
 
     # return a stack of all components
-    return stack_list(relus)
+    return stack_list(maxs)
+
+
+def relu(phi):
+    """ returns vector with ith component equal to max(phi_i, 0) """
+    assert phi.outdim >= 1
+
+    zero = amnet.Constant(phi, np.zeros(phi.outdim))
+    return max2(phi, zero)
+
+
+def max_list(phi_list):
+    """ 
+    Returns vector of same size as phi_list[0]
+    
+    Example:
+        if phi_list evaluates to [[1,2,3], [4,-5,6]]
+        then max_list(phi_list) evaluates to [4, 2, 6]
+    """
+    assert _valid_nonempty_Amn_list(phi_list)
+    return amnet.util.foldl(max2, phi_list[0], phi_list[1:])
+
+
+def max_all(phi):
+    """ returns the maximum element of phi """
+    n = phi.outdim
+    assert n >= 1
+    return max_list([select(phi, i) for i in range(n)])
 
 
 def make_max2(phi):
     assert phi.outdim == 2
 
-    a1 = amnet.Affine(
+    a1 = amnet.Linear(
         np.array([[1, 0]]),
-        phi,
-        np.array([0])
+        phi
     )
-    a2 = amnet.Affine(
+    a2 = amnet.Linear(
         np.array([[0, 1]]),
-        phi,
-        np.array([0])
+        phi
     )
-    a3 = amnet.Affine(
+    a3 = amnet.Linear(
         np.array([[-1, 1]]),
-        phi,
-        np.array([0])
+        phi
     )
 
     return amnet.Mu(a1, a2, a3)
-
-
-def make_max3(phi):
-    assert phi.outdim == 3
-
-    phi0 = amnet.select(phi, 0)
-    phi12 = amnet.Affine(
-        np.eye(2, 3, 1),
-        phi,
-        np.zeros(2)
-    )
-
-    max12 = make_max2(phi12)
-    phi0_max12 = amnet.Stack(phi0, max12)
-
-    return make_max2(phi0_max12)
-
-
-def make_max4(phi):
-    """ uses fewer mus than make_max(phi)"""
-    assert phi.outdim == 4
-
-    phi01 = amnet.Affine(
-        np.eye(2, 4, 0),
-        phi,
-        np.zeros(2)
-    )
-    phi23 = amnet.Affine(
-        np.eye(2, 4, 2),
-        phi,
-        np.zeros(2)
-    )
-
-    max01 = make_max2(phi01)
-    max23 = make_max2(phi23)
-    max01_max23 = amnet.Stack(max01, max23)
-
-    return make_max2(max01_max23)
 
 
 def make_max(phi):
