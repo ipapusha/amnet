@@ -142,6 +142,71 @@ class TestAtoms(unittest.TestCase):
             s = relu(np.array([yv]))
             self.assertEqual(r, s)
 
+    def test_max2_min2(self):
+        xy = amnet.Variable(6, name='xy')
+        x = amnet.Linear(
+            np.eye(3,6,0),
+            xy
+        )
+        y = amnet.Linear(
+            np.eye(3,6,3),
+            xy
+        )
+        max_xy = amnet.atoms.max2(x, y)
+        min_xy = amnet.atoms.min2(x, y)
+
+        def true_max2(xinp, yinp):
+            return np.maximum(xinp, yinp)
+
+        def true_min2(xinp, yinp):
+            return np.minimum(xinp, yinp)
+
+        for xyv in itertools.product(self.floatvals2, repeat=6):
+            xyinp = np.array(xyv)
+            xinp = xyinp[:3]
+            yinp = xyinp[3:]
+
+            max_xy_tv = true_max2(xinp, yinp)
+            max_xy_v  = max_xy.eval(xyinp)
+
+            min_xy_tv = true_min2(xinp, yinp)
+            min_xy_v = min_xy.eval(xyinp)
+
+            self.assertEqual(len(max_xy_tv), 3)
+            self.assertEqual(len(max_xy_v), 3)
+            self.assertAlmostEqual(norm(max_xy_v - max_xy_tv), 0)
+
+            self.assertEqual(len(min_xy_tv), 3)
+            self.assertEqual(len(min_xy_v), 3)
+            self.assertAlmostEqual(norm(min_xy_v - min_xy_tv), 0)
+
+    def test_max_all_max_aff(self):
+        x = amnet.Variable(4, name='x')
+
+        w = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]])
+        b = np.array([1.1, 1.2, 1.3])
+
+        y = amnet.Affine(
+            w,
+            x,
+            b
+        )
+        max_y = amnet.atoms.max_all(y)
+        maff = amnet.atoms.max_aff(w, b, x)
+
+        def true_max_aff(xinp):
+            return np.max(np.dot(w, xinp) + b)
+
+        for xv in itertools.product(self.floatvals2, repeat=4):
+            xinp = np.array(xv)
+
+            tv = true_max_aff(xinp)
+            max_y_v = max_y.eval(xinp)
+            maff_v  = maff.eval(xinp)
+
+            self.assertAlmostEqual(norm(tv - max_y_v), 0)
+            self.assertAlmostEqual(norm(tv - maff_v), 0)
+
     def test_triplexer(self):
         x = amnet.Variable(1, name='xv')
 

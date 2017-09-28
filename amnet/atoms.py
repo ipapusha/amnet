@@ -207,6 +207,8 @@ def relu(phi):
     assert phi.outdim >= 1
 
     zero = amnet.Constant(phi, np.zeros(phi.outdim))
+    assert zero.outdim == phi.outdim
+
     return thread_over(
         max2_1,
         phi,
