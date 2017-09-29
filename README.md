@@ -4,7 +4,6 @@
 ```
 import numpy as np
 from amnet import Variable, Linear, Mu
-import amnet
 
 # a two-dimensional input variable
 x = Variable(2, name='x')
