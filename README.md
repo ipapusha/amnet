@@ -1,7 +1,7 @@
 ## AMNET: Affine Multiplexing Network Toolbox
 
 ### Example usage
-```
+```python
 import numpy as np
 from amnet import Variable, Linear, Mu
 
