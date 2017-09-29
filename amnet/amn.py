@@ -59,7 +59,7 @@ class Affine(Amn):
 
     def __str__(self):
         return 'Affine(w=%s, x=%s, b=%s)' % \
-               (str(self.w), str(self.x), str(self.b))
+               (str(self.w.tolist()), str(self.x), str(self.b.tolist()))
 
     def eval(self, inp):
         assert len(inp) == self.indim
@@ -130,7 +130,7 @@ class Stack(Amn):
         self.y = y
 
     def __str__(self):
-        return '[%s; %s]' % (str(self.x), str(self.y))
+        return 'Stack(%s, %s)' % (str(self.x), str(self.y))
 
     def eval(self, inp):
         assert len(inp) == self.indim
@@ -156,7 +156,7 @@ class Constant(Affine):
         )
 
     def __str__(self):
-        return 'Constant(x=%s, b=%s)' % (str(self.x), str(self.b))
+        return 'Constant(x=%s, b=%s)' % (str(self.x), str(self.b.tolist()))
 
     def eval(self, inp):
         # short-circuit evaluation
@@ -175,4 +175,4 @@ class Linear(Affine):
         )
 
     def __str__(self):
-        return 'Linear(w=%s, x=%s)' % (str(self.w), str(self.x))
+        return 'Linear(w=%s, x=%s)' % (str(self.w.tolist()), str(self.x))

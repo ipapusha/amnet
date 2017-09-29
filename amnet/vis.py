@@ -3,6 +3,7 @@ import graphviz
 
 import copy
 
+
 class NamingContext(object):
     def __init__(self):
         self.symbols = dict()
@@ -13,12 +14,15 @@ class NamingContext(object):
                   for name in self.symbols.keys()
                   if name.startswith(prefix)]
 
-        # if there are no existing variables
+        # if there are no existing variables return prefix
         if len(pnames) == 0:
             return prefix + '0'
 
         # otherwise, return 1 + largest value in the names
+        pnums = [int(name[len(prefix):]) for name in pnames]
+        maxnum = max(pnums)
 
+        return prefix + str(1 + maxnum)
 
 
 
