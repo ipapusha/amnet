@@ -154,7 +154,7 @@ def _node_for(ctx, name, dot, append_dims=True):
     # the checking order should go *up* the class hierarchy
     if isinstance(phi, amnet.Variable):
         shape = 'box'
-        fillcolor = 'gray90'
+        fillcolor = 'gray80'
     elif isinstance(phi, amnet.Linear):
         pass
     elif isinstance(phi, amnet.Constant):
@@ -163,7 +163,7 @@ def _node_for(ctx, name, dot, append_dims=True):
         pass
     elif isinstance(phi, amnet.Mu):
         shape = 'box'
-        fillcolor = 'gray90'
+        fillcolor = 'gray80'
         style = 'filled'
     elif isinstance(phi, amnet.Stack):
         shape = 'box'
@@ -198,13 +198,33 @@ def amn2gv(phi, title=None):
         _node_for(ctx, n1, dot, append_dims=True)
 
         # create edges
-        for n2 in sg[n1]:
-            dot.edge(n2,
-                     n1,
-                     color='gray70',
-                     arrowhead='vee',
-                     arrowsize='0.5')
+        assert len(sg[n1]) <= 3
 
+        if len(sg[n1]) < 3:
+            # not a mu-node
+            for n2 in sg[n1]:
+                dot.edge(n2,
+                         n1,
+                         color='gray60',
+                         arrowhead='normal',
+                         arrowsize='0.6')
+        else:
+            # mu-node
+            dot.edge(sg[n1][0],   # x-input
+                     n1,
+                     color='gray60',
+                     arrowhead='dot',
+                     arrowsize='0.6')
+            dot.edge(sg[n1][1],  # y-input
+                     n1,
+                     color='gray60',
+                     arrowhead='odot',
+                     arrowsize='0.6')
+            dot.edge(sg[n1][2],  # z-input
+                     n1,
+                     color='gray60',
+                     arrowhead='normal',
+                     arrowsize='0.6')
     if title:
         dot.graph_attr['labelloc'] = 't'
         dot.graph_attr['fontname'] = 'Courier New'

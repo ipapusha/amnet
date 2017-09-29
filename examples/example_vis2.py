@@ -8,11 +8,11 @@ def make_vgc(alpha):
 
     # affine transformations
     zero1 = amnet.Constant(x, np.zeros(1))
-    ae    = amnet.Affine(np.array([[alpha, 0]]), x, np.zeros(1))
-    e     = amnet.Affine(np.array([[1, 0]]), x, np.zeros(1))
-    neg_e = amnet.Affine(np.array([[-1, 0]]), x, np.zeros(1))
-    edot  = amnet.Affine(np.array([[0, 1]]), x, np.zeros(1))
-    neg_edot = amnet.Affine(np.array([[0, -1]]), x, np.zeros(1))
+    e     = amnet.atoms.select(x, 0)
+    edot  = amnet.atoms.select(x, 1)
+    ae    = amnet.Linear(np.array([[alpha, 0]]), x)
+    neg_e = amnet.Linear(np.array([[-1, 0]]), x)
+    neg_edot = amnet.Linear(np.array([[0, -1]]), x)
 
     return amnet.atoms.gate_or(
         amnet.atoms.gate_or(
