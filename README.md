@@ -1,5 +1,8 @@
 ## AMNET: Affine Multiplexing Network Toolbox
 
+### Screenshot
+![Maximum](https://raw.githubusercontent.com/ipapusha/amnet/master/doc/vis/max.gv.png)
+
 ### Example usage
 ```python
 import numpy as np
@@ -24,10 +27,6 @@ phimax = Mu(x0, x1, z)
 print phimax
 print phimax.eval([1, -2]) # returns: 1
 ```
-
-### Screenshot
-![Maximum](https://raw.githubusercontent.com/ipapusha/amnet/master/doc/vis/max.gv.png)
-![VGC](https://raw.githubusercontent.com/ipapusha/amnet/master/doc/vis/phi_vgc.gv.png)
 
 ### References
 * Forthcoming...
