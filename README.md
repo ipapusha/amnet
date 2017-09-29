@@ -25,5 +25,9 @@ print phimax
 print phimax.eval([1, -2]) # returns: 1
 ```
 
+### Screenshot
+![Maximum](https://raw.githubusercontent.com/ipapusha/boxqp/master/doc/vis/max.gv.png)
+![VGC](https://raw.githubusercontent.com/ipapusha/boxqp/master/doc/vis/phi_vgc.gv.png)
+
 ### References
 * Forthcoming...

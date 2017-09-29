@@ -15,13 +15,11 @@ z = amnet.Linear(np.array([[-1, 1]]), x)
 # maximum of x0 and x1
 phimax = amnet.Mu(x0, x1, z)
 
-# or equivalently, we can instead write
-phimax2 = amnet.atoms.max_all(x)
-
 print phimax
 print phimax.eval([1, -2]) # returns: 1
 
-print phimax2
-print phimax.eval([1, -2]) # returns: 1
-
 # visualize
+dot = amnet.vis.amn2gv(phimax, title='max2(var0)')
+dot.render(filename='max.gv', directory='vis')
+
+print dot
