@@ -3,10 +3,13 @@ import graphviz
 
 import copy
 
-
 class NamingContext(object):
+    """
+    NamingContext keeps track of a mapping (symbol table)
+    symbols[name -> node]
+    """
     @classmethod
-    def prefix_for(cls, phi):
+    def default_prefix_for(cls, phi):
         """
         Returns a string that is an appropriate prefix for 
         the amn node type of phi
@@ -28,6 +31,16 @@ class NamingContext(object):
             return 'amn'
         else:
             assert False
+
+    def is_valid(self):
+        """
+        Checks that the symbol table has a valid inverse
+        by verifying that symbols is an injection
+        (no two names map to the same node)
+        """
+        ids = set(id(v) for v in self.symbols.values())
+        return len(ids) == len(self.symbols.values())
+
 
     def __init__(self, root=None):
         self.symbols = dict()
@@ -81,7 +94,7 @@ class NamingContext(object):
 
         if not visited:
             # get a unique name
-            name = self.next_unique_name(prefix=NamingContext.prefix_for(phi))
+            name = self.next_unique_name(prefix=NamingContext.default_prefix_for(phi))
 
             # assign the name
             self.symbols[name] = phi
@@ -127,6 +140,31 @@ class NamingContext(object):
                 sg[name].append(self.name_of(phi.z))
 
         return sg
+
+    def rename(self, phi, newname):
+        oldname = self.name_of(phi)
+        assert oldname is not None, 'nothing to rename'
+        assert newname and newname[0].isalpha(), 'invalid new name'
+
+        # maintain invariant
+        assert self.is_valid()
+
+        # if newname already exists, rename that variable first
+        if newname in self.symbols:
+            phi2 = self.symbols[newname]
+            name2 = self.next_unique_name(
+                prefix=NamingContext.default_prefix_for(phi2)
+            )
+            print 'Warning: %s exists within context, moving existing symbol to %s' % \
+                  (newname, name2)
+            self.symbols[name2] = phi2
+
+        # now simply reattach the object
+        self.symbols[newname] = self.symbols[oldname]
+        del self.symbols[oldname]
+
+        # maintain invariant
+        assert self.is_valid()
 
 def _node_for(ctx, name, dot, append_dims=True):
     """
@@ -181,12 +219,12 @@ def _node_for(ctx, name, dot, append_dims=True):
              fontname=fontname,
              fontsize=fontsize)
 
-def amn2gv(phi, title=None):
-    # first do a deep copy of the amn to ensure we don't touch it
-    phi_copy = copy.deepcopy(phi)
-
+def amn2gv(phi, ctx=None, title=None):
     # walk the copy to find unique nodes and assign names to them
-    ctx = NamingContext(phi_copy)
+    if ctx is None:
+        ctx = NamingContext(phi)
+
+    # generate the signal graph
     sg = ctx.signal_graph()
 
     # create the visualization object
