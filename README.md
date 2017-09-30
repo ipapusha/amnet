@@ -1,7 +1,7 @@
 ## AMNET: Affine Multiplexing Network Toolbox
 
 ### Screenshot
-![Max](https://raw.githubusercontent.com/ipapusha/amnet/master/doc/vis/max.gv.png)
+![Maxvis](https://raw.githubusercontent.com/ipapusha/amnet/master/doc/fig/maxvis.png)
 
 ### Example usage
 ```python
