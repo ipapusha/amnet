@@ -1,6 +1,4 @@
 ## AMNET: Affine Multiplexing Network Toolbox
-
-### Screenshot
 ![Maxvis](https://raw.githubusercontent.com/ipapusha/amnet/master/doc/fig/maxvis.png)
 
 ### Example usage
