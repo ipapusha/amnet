@@ -35,7 +35,7 @@ class NamingContext(object):
     def is_valid(self):
         """
         Checks that the symbol table has a valid inverse
-        by verifying that symbols is an bijection
+        by verifying that symbols is a bijection
         (no two names map to the same node, and there are no null pointers)
         """
 
@@ -48,13 +48,25 @@ class NamingContext(object):
         ids = set(id(v) for v in self.symbols.values())
         return len(ids) == len(self.symbols.values())
 
+    def only_one_input(self):
+        """
+        Checks that the symbol table has only one instance
+        of an input variable
+        """
+        vars_seen = 0
+        for v in self.symbols.values():
+            if isinstance(v, amnet.Variable):
+                vars_seen += 1
 
-    def __init__(self, root=None):
+        return vars_seen == 1
+
+    def __init__(self, phi=None):
         self.symbols = dict()
 
-        # does not touch the tree, only assigns to it
-        if root is not None:
-            self.assign_names(root)
+        # does not touch the tree, only recursively
+        # assigns names to the tree rooted at phi
+        if phi is not None:
+            self.assign_names(phi)
 
     def prefix_names(self, prefix):
         """
@@ -101,6 +113,18 @@ class NamingContext(object):
         """
         for k, v in self.symbols.items():
             if v is phi:
+                return k
+
+        return None
+
+    def name_of_input(self):
+        """
+        Returns the name of the single Variable in this context
+        """
+        assert self.only_one_input()
+
+        for k, v in self.symbols.items():
+            if isinstance(v, amnet.Variable):
                 return k
 
         return None
@@ -225,153 +249,172 @@ class NamingContext(object):
 
 
 class SmtEncoder(object):
-    def __init__(self, phi, solver=None):
-        self.symbols = dict()  # name str -> z3 variable
-        self.phi = phi
+    def __init__(self, ctx, solver=None):
+        # save the context
+        self.ctx = ctx
+
+        assert ctx.is_valid()
+        assert ctx.only_one_input() # input node
+
+        # initialize new SMT solver if needed
         if solver is None:
-            self.solver = z3.Solver()
-        else:
-            self.solver = solver
+            solver = z3.Solver()
+        self.solver = solver
 
-    def __str__(self):
-        return 'SmtEncoder: ' + str(self.symbols)
+    def var_for(self, phi):
+        """
+        Returns z3 variable associated with the output of phi 
+        """
+        pass
 
-    def get_unique_varname(self, prefix='x'):
-        assert len(prefix) >= 1
-        assert prefix[0].isalpha()
-
-        # all variables already used, with the given prefix
-        existing = filter(lambda x: x.startswith(prefix),
-                          self.symbols.keys())
-
-        # find a unique suffix
-        if len(existing) == 0:
-            return prefix + '0'
-
-        # TODO: can be more efficient by keeping track of max suffix state
-        max_suffix = max(int(varname[len(prefix):]) for varname in existing)
-        return prefix + str(max_suffix + 1)
-
-    def add_new_symbol(self, name, target=None):
-        assert name not in self.symbols
-        self.symbols[name] = target
-
-    def add_new_var(self, name, dim=1):
-        assert dim >= 1
-        self.add_new_symbol(name, z3.RealVector(name, dim))
-
-    def get_symbol(self, psi):
-        return self.symbols[psi.outvar]
-
-    def set_symbol(self, psi, target):
-        self.symbols[psi.outvar] = target
-
-    # helper methods for adding variables to each element type
-    def _get_unique_outvarname(self, psi):
-        if isinstance(psi, amnet.Variable):
-            #return self.get_unique_varname(prefix='xv')
-            return self.get_unique_varname(prefix=psi.name)
-        elif isinstance(psi, amnet.Affine):
-            return self.get_unique_varname(prefix='ya')
-        elif isinstance(psi, amnet.Mu):
-            return self.get_unique_varname(prefix='wm')
-        elif isinstance(psi, amnet.Constant):
-            return self.get_unique_varname(prefix='c')
-        elif isinstance(psi, amnet.Stack):
-            return self.get_unique_varname(prefix='xys'),
-        else:
-            return self.get_unique_varname(prefix='aa')
-
-    def _init_outvar(self, psi):
-        """ only touches the specific node in the tree """
-        if not hasattr(psi, 'outvar'):
-            psi.outvar = self._get_unique_outvarname(psi)
-            self.add_new_var(psi.outvar, psi.outdim)
-
-        psi.enc = self
-
-        assert len(self.symbols[psi.outvar]) == psi.outdim
-
-    def _init_tree(self, psi):
-        """ touches the whole tree """
-        # 1. initialize the output variable
-        self._init_outvar(psi)
-
-        # 2. bind to the inputs by adding a constraint
-        if isinstance(psi, amnet.Variable):
-            # do not bind the input of a variable
-            pass
-        elif isinstance(psi, amnet.Affine):
-            self._init_tree(psi.x)
-
-            xv = self.symbols[psi.x.outvar]
-            yv = self.symbols[psi.outvar]
-
-            assert len(yv) == psi.outdim
-            assert len(xv) >= 1
-
-            for i in range(psi.outdim):
-                rowi = psi.w[i,:]
-                bi = psi.b[i]
-
-                rowsum = z3.Sum([wij * xj for wij, xj in izip(rowi, xv) if wij != 0])
-                #rowsum = z3.Sum([wij * xj for wij, xj in izip(rowi, xv)])
-                if bi == 0:
-                    self.solver.add(yv[i] == rowsum)
-                else:
-                    self.solver.add(yv[i] == rowsum + bi)
-
-        elif isinstance(psi, amnet.Mu):
-            self._init_tree(psi.x)
-            self._init_tree(psi.y)
-            self._init_tree(psi.z)
-
-            xv = self.symbols[psi.x.outvar]
-            yv = self.symbols[psi.y.outvar]
-            zv = self.symbols[psi.z.outvar]
-            wv = self.symbols[psi.outvar]
-
-            assert len(zv) == 1
-            assert len(xv) == len(yv)
-            assert len(xv) == psi.outdim
-            assert len(wv) == len(xv)
-
-            z = zv[0]
-            for i in range(len(wv)):
-                x, y, = xv[i], yv[i]
-                w = wv[i]
-                self.solver.add(w == z3.If(z <= 0, x, y))
-
-        elif isinstance(psi, amnet.Constant):
-            # convert z3 variable ('RealVec') to a z3 constant (list of 'RealVal')
-            # and bind it to the constant value
-            self.symbols[psi.outvar] = [z3.RealVal(ci) for ci in psi.c]
-        elif isinstance(psi, amnet.Stack):
-            print 'Init stack: ' + str(psi.outvar)
-            print 'S1 = ' + str(psi.x)
-            print 'S2 = ' + str(psi.y)
-            self._init_tree(psi.x)
-            self._init_tree(psi.y)
-
-            xv = self.symbols[psi.x.outvar]
-            yv = self.symbols[psi.y.outvar]
-            xyv = self.symbols[psi.outvar]
-
-            assert len(xv) + len(yv) == len(xyv)
-
-            for left, right in izip(xyv, chain(xv, yv)):
-                self.solver.add(left == right)
-        else:
-            raise Exception('Invalid node type')
-
-    def init_tree(self):
-        self._init_tree(self.phi)
-
-    def set_const(self, psi, c):
-        """ set output of amn psi to numpy array c """
-        yv = self.get_symbol(psi)
-
-        assert len(yv) == len(c)
-
-        for yvi, ci in izip(yv, c):
-            self.solver.add(yvi == z3.RealVal(ci))
+# class SmtEncoder(object):
+#     def __init__(self, phi, solver=None):
+#         self.symbols = dict()  # name str -> z3 variable
+#         self.phi = phi
+#         if solver is None:
+#             self.solver = z3.Solver()
+#         else:
+#             self.solver = solver
+#
+#     def __str__(self):
+#         return 'SmtEncoder: ' + str(self.symbols)
+#
+#     def get_unique_varname(self, prefix='x'):
+#         assert len(prefix) >= 1
+#         assert prefix[0].isalpha()
+#
+#         # all variables already used, with the given prefix
+#         existing = filter(lambda x: x.startswith(prefix),
+#                           self.symbols.keys())
+#
+#         # find a unique suffix
+#         if len(existing) == 0:
+#             return prefix + '0'
+#
+#         # TODO: can be more efficient by keeping track of max suffix state
+#         max_suffix = max(int(varname[len(prefix):]) for varname in existing)
+#         return prefix + str(max_suffix + 1)
+#
+#     def add_new_symbol(self, name, target=None):
+#         assert name not in self.symbols
+#         self.symbols[name] = target
+#
+#     def add_new_var(self, name, dim=1):
+#         assert dim >= 1
+#         self.add_new_symbol(name, z3.RealVector(name, dim))
+#
+#     def get_symbol(self, psi):
+#         return self.symbols[psi.outvar]
+#
+#     def set_symbol(self, psi, target):
+#         self.symbols[psi.outvar] = target
+#
+#     # helper methods for adding variables to each element type
+#     def _get_unique_outvarname(self, psi):
+#         if isinstance(psi, amnet.Variable):
+#             #return self.get_unique_varname(prefix='xv')
+#             return self.get_unique_varname(prefix=psi.name)
+#         elif isinstance(psi, amnet.Affine):
+#             return self.get_unique_varname(prefix='ya')
+#         elif isinstance(psi, amnet.Mu):
+#             return self.get_unique_varname(prefix='wm')
+#         elif isinstance(psi, amnet.Constant):
+#             return self.get_unique_varname(prefix='c')
+#         elif isinstance(psi, amnet.Stack):
+#             return self.get_unique_varname(prefix='xys'),
+#         else:
+#             return self.get_unique_varname(prefix='aa')
+#
+#     def _init_outvar(self, psi):
+#         """ only touches the specific node in the tree """
+#         if not hasattr(psi, 'outvar'):
+#             psi.outvar = self._get_unique_outvarname(psi)
+#             self.add_new_var(psi.outvar, psi.outdim)
+#
+#         psi.enc = self
+#
+#         assert len(self.symbols[psi.outvar]) == psi.outdim
+#
+#     def _init_tree(self, psi):
+#         """ touches the whole tree """
+#         # 1. initialize the output variable
+#         self._init_outvar(psi)
+#
+#         # 2. bind to the inputs by adding a constraint
+#         if isinstance(psi, amnet.Variable):
+#             # do not bind the input of a variable
+#             pass
+#         elif isinstance(psi, amnet.Affine):
+#             self._init_tree(psi.x)
+#
+#             xv = self.symbols[psi.x.outvar]
+#             yv = self.symbols[psi.outvar]
+#
+#             assert len(yv) == psi.outdim
+#             assert len(xv) >= 1
+#
+#             for i in range(psi.outdim):
+#                 rowi = psi.w[i,:]
+#                 bi = psi.b[i]
+#
+#                 rowsum = z3.Sum([wij * xj for wij, xj in izip(rowi, xv) if wij != 0])
+#                 #rowsum = z3.Sum([wij * xj for wij, xj in izip(rowi, xv)])
+#                 if bi == 0:
+#                     self.solver.add(yv[i] == rowsum)
+#                 else:
+#                     self.solver.add(yv[i] == rowsum + bi)
+#
+#         elif isinstance(psi, amnet.Mu):
+#             self._init_tree(psi.x)
+#             self._init_tree(psi.y)
+#             self._init_tree(psi.z)
+#
+#             xv = self.symbols[psi.x.outvar]
+#             yv = self.symbols[psi.y.outvar]
+#             zv = self.symbols[psi.z.outvar]
+#             wv = self.symbols[psi.outvar]
+#
+#             assert len(zv) == 1
+#             assert len(xv) == len(yv)
+#             assert len(xv) == psi.outdim
+#             assert len(wv) == len(xv)
+#
+#             z = zv[0]
+#             for i in range(len(wv)):
+#                 x, y, = xv[i], yv[i]
+#                 w = wv[i]
+#                 self.solver.add(w == z3.If(z <= 0, x, y))
+#
+#         elif isinstance(psi, amnet.Constant):
+#             # convert z3 variable ('RealVec') to a z3 constant (list of 'RealVal')
+#             # and bind it to the constant value
+#             self.symbols[psi.outvar] = [z3.RealVal(ci) for ci in psi.c]
+#         elif isinstance(psi, amnet.Stack):
+#             print 'Init stack: ' + str(psi.outvar)
+#             print 'S1 = ' + str(psi.x)
+#             print 'S2 = ' + str(psi.y)
+#             self._init_tree(psi.x)
+#             self._init_tree(psi.y)
+#
+#             xv = self.symbols[psi.x.outvar]
+#             yv = self.symbols[psi.y.outvar]
+#             xyv = self.symbols[psi.outvar]
+#
+#             assert len(xv) + len(yv) == len(xyv)
+#
+#             for left, right in izip(xyv, chain(xv, yv)):
+#                 self.solver.add(left == right)
+#         else:
+#             raise Exception('Invalid node type')
+#
+#     def init_tree(self):
+#         self._init_tree(self.phi)
+#
+#     def set_const(self, psi, c):
+#         """ set output of amn psi to numpy array c """
+#         yv = self.get_symbol(psi)
+#
+#         assert len(yv) == len(c)
+#
+#         for yvi, ci in izip(yv, c):
+#             self.solver.add(yvi == z3.RealVal(ci))
