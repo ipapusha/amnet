@@ -65,13 +65,27 @@ class NamingContext(object):
         # if there are no existing variables return new varname
         pnames = self.prefix_names(prefix)
         if len(pnames) == 0:
-            return prefix + '0'
+            retval = prefix + '0'
+            assert retval not in self.symbols, 'bad prefix'
+            return retval
 
         # otherwise, return 1 + largest value in the names
-        pnums = [int(name[len(prefix):]) for name in pnames]
+        #pnums = [int(name[len(prefix):]) for name in pnames]
+        #maxnum = max(pnums)
+        pnums = []
+        for name in pnames:
+            suffix = name[len(prefix):]
+            if suffix.isdigit():
+                pnums.append(int(suffix))
+        if len(pnums) == 0:
+            retval = prefix + '0'
+            assert retval not in self.symbols, 'bad prefix'
+            return retval
         maxnum = max(pnums)
 
-        return prefix + str(1 + maxnum)
+        retval = prefix + str(1 + maxnum)
+        assert retval not in self.symbols, 'bad prefix'
+        return retval
 
     def name_of(self, phi):
         """
@@ -86,7 +100,7 @@ class NamingContext(object):
 
     def assign_name(self, phi):
         """
-        Assigns a name only phi (and only phi), 
+        Assigns a name to phi (and only phi), 
         provided it does not already have a name
         in the naming context
         """
