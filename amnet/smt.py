@@ -261,22 +261,43 @@ class SmtEncoder(object):
             solver = z3.Solver()
         self.solver = solver
 
+        # initialize variables
+        self.vars = dict() # name -> RealVector
+        self._init_vars()
+
     def var_of(self, phi):
         """
         Returns z3 variable (as a list) associated with the output of phi 
         """
-        # XXX make sure this doesn't create a new RealVector
-        # every time it's called -- may need to keep a list of RealVectors
-        # associated with the context
-        return z3.RealVector(prefix=self.ctx.name_of(phi),
-                             size=phi.outdim)
+        name = self.ctx.name_of(phi)
+        return self.vars[name]
+
+    def _init_vars(self):
+        assert self.ctx.is_valid()
+        assert self.ctx.only_one_input()
+
+        for name, phi in self.ctx.symbols.items():
+            self.vars[name] = z3.RealVector(
+                prefix=name,
+                sz=phi.outdim
+            )
 
     def _encode(self):
         """
         encodes the relationship between the nodes
         by iterating through the context
         """
-        for node, phi in self.ctx.symbols.items():
+        for name, phi in self.ctx.symbols.items():
+            # z3 output variable for this node
+            outvar = self.var_of(name)
+            assert outvar is self.vars[name]
+            assert len(outvar) == phi.outdim
+
+            # z3 input variables for child nodes
+            xvar = self.var_of(phi.x) if hasattr(phi, 'x') else None
+            yvar = self.var_of(phi.y) if hasattr(phi, 'y') else None
+            zvar = self.var_of(phi.z) if hasattr(phi, 'z') else None
+
             if hasattr(phi, 'x'):
                 pass
             if hasattr(phi, 'y'):
