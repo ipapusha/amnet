@@ -1,8 +1,6 @@
 import amnet
 import graphviz
 
-import copy
-
 class NamingContext(object):
     """
     NamingContext keeps track of a mapping (symbol table)
@@ -169,7 +167,7 @@ class NamingContext(object):
             name2 = self.next_unique_name(
                 prefix=NamingContext.default_prefix_for(phi2)
             )
-            print 'Warning: %s exists within context, moving existing symbol to %s' % \
+            print 'Warning (rename): %s exists within context, moving existing symbol to %s' % \
                   (newname, name2)
             self.symbols[name2] = phi2
 
@@ -180,6 +178,43 @@ class NamingContext(object):
         # maintain invariant
         assert self.is_valid()
 
+    def merge_ctx(self, other_ctx):
+        """
+        Merges another naming context into the current context, keeping the
+        same names if possible. 
+        Renames the symbols from the other context when necessary.
+        """
+        assert self.is_valid()
+
+        # for asserts
+        nodes_premerge = len(self.symbols)
+        nodes_added = 0
+
+        for other_name, other_phi in other_ctx.symbols.items():
+            here_name = self.name_of(other_phi)
+            if here_name is None:
+                # other node is not in current ctx,
+                # try to keep the same name
+                if other_name not in self.symbols:
+                    self.symbols[other_name] = other_phi
+                else:
+                    other_name2 = self.next_unique_name(
+                        prefix=NamingContext.default_prefix_for(other_phi)
+                    )
+                    self.symbols[other_name2] = other_phi
+
+                nodes_added += 1
+            else:
+                # node already in current context, keep it
+                print 'Warning (merge): %s already in destination context as %s' % \
+                      (k, vname)
+
+        # keep invariant
+        nodes_postmerge = len(self.symbols)
+        assert nodes_postmerge == nodes_premerge + nodes_added
+        assert self.is_valid()
+
+
 def _node_for(ctx, name, dot, append_dims=True):
     """
     creates a node for phi in the dot object with appropriate
@@ -188,20 +223,13 @@ def _node_for(ctx, name, dot, append_dims=True):
     phi = ctx.symbols[name]
 
     if append_dims:
-        label = ('%s[%d->%d]' % (name, phi.indim, phi.outdim))
+        label = '%s[%d->%d]' % (name, phi.indim, phi.outdim)
     else:
         label = name
 
-    shape = 'box'
-    style = 'filled, rounded'
-    color = 'gray50'
-    fillcolor = 'white'
-    #margin = '0.11,0.055' # default
-    margin = '0.1,0.05'
-    height = '0.3'
-    #fontname='Times-Roman' # default
-    fontname='Courier New'
-    fontsize='11'
+    shape = None
+    style = None
+    fillcolor = None
 
     # the checking order should go *up* the class hierarchy
     if isinstance(phi, amnet.Variable):
@@ -215,8 +243,8 @@ def _node_for(ctx, name, dot, append_dims=True):
         pass
     elif isinstance(phi, amnet.Mu):
         shape = 'box'
-        fillcolor = 'gray80'
         style = 'filled'
+        fillcolor = 'gray80'
     elif isinstance(phi, amnet.Stack):
         shape = 'box'
     elif isinstance(phi, amnet.Amn):
@@ -226,15 +254,10 @@ def _node_for(ctx, name, dot, append_dims=True):
              label=label,
              shape=shape,
              style=style,
-             color=color,
-             fillcolor=fillcolor,
-             height=height,
-             margin=margin,
-             fontname=fontname,
-             fontsize=fontsize)
+             fillcolor=fillcolor)
 
 def amn2gv(phi, ctx=None, title=None):
-    # walk the copy to find unique nodes and assign names to them
+    # walk the tree to find unique nodes and assign names to them
     if ctx is None:
         ctx = NamingContext(phi)
 
@@ -244,6 +267,25 @@ def amn2gv(phi, ctx=None, title=None):
     # create the visualization object
     dot = graphviz.Digraph()
     dot.graph_attr['rankdir'] = 'BT'
+    if title:
+        dot.graph_attr['labelloc'] = 't'
+        dot.graph_attr['fontname'] = 'Courier New'
+        dot.graph_attr['label'] = title
+
+    # default node style
+    dot.node_attr['fontname'] = 'Courier New'
+    dot.node_attr['fontsize'] = '11'
+    dot.node_attr['margin'] = '0.1,0.05'  # 0.11,0.055 default
+    dot.node_attr['height'] = '0.3'
+    dot.node_attr['color'] = 'gray50'
+    dot.node_attr['shape'] = 'box'
+    dot.node_attr['style'] = 'filled, rounded'
+    dot.node_attr['fillcolor'] = 'white'
+
+    # default edge style
+    dot.edge_attr['color'] = 'gray60'
+    dot.edge_attr['arrowsize'] = '0.6'
+    dot.edge_attr['arrowhead'] = 'normal'
 
     for n1 in sg:
         # create node
@@ -255,32 +297,18 @@ def amn2gv(phi, ctx=None, title=None):
         if len(sg[n1]) < 3:
             # not a mu-node
             for n2 in sg[n1]:
-                dot.edge(n2,
-                         n1,
-                         color='gray60',
-                         arrowhead='normal',
-                         arrowsize='0.6')
+                dot.edge(n2, n1)
         else:
             # mu-node
             dot.edge(sg[n1][0],   # x-input
                      n1,
-                     color='gray60',
-                     arrowhead='dot',
-                     arrowsize='0.6')
+                     arrowhead='dot')
             dot.edge(sg[n1][1],  # y-input
                      n1,
-                     color='gray60',
-                     arrowhead='odot',
-                     arrowsize='0.6')
+                     arrowhead='odot')
             dot.edge(sg[n1][2],  # z-input
                      n1,
-                     color='gray60',
-                     arrowhead='normal',
-                     arrowsize='0.6')
-    if title:
-        dot.graph_attr['labelloc'] = 't'
-        dot.graph_attr['fontname'] = 'Courier New'
-        dot.graph_attr['label'] = title
+                     arrowhead='normal')
 
     # return the dot object
     return dot
