@@ -253,8 +253,8 @@ class SmtEncoder(object):
         # save the context
         self.ctx = ctx
 
-        assert ctx.is_valid()
-        assert ctx.only_one_input() # input node
+        assert self.ctx.is_valid()
+        assert self.ctx.only_one_input() # input node
 
         # initialize new SMT solver if needed
         if solver is None:
