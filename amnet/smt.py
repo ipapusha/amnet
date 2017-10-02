@@ -261,11 +261,32 @@ class SmtEncoder(object):
             solver = z3.Solver()
         self.solver = solver
 
-    def var_for(self, phi):
+    def var_of(self, phi):
         """
-        Returns z3 variable associated with the output of phi 
+        Returns z3 variable (as a list) associated with the output of phi 
         """
-        pass
+        # XXX make sure this doesn't create a new RealVector
+        # every time it's called -- may need to keep a list of RealVectors
+        # associated with the context
+        return z3.RealVector(prefix=self.ctx.name_of(phi),
+                             size=phi.outdim)
+
+    def _encode(self):
+        """
+        encodes the relationship between the nodes
+        by iterating through the context
+        """
+        for node, phi in self.ctx.symbols.items():
+            if hasattr(phi, 'x'):
+                pass
+            if hasattr(phi, 'y'):
+                assert isinstance(phi, amnet.Mu) or \
+                       isinstance(phi, amnet.Stack)
+                pass
+            if hasattr(phi, 'z'):
+                assert isinstance(phi, amnet.Mu)
+                pass
+
 
 # class SmtEncoder(object):
 #     def __init__(self, phi, solver=None):
