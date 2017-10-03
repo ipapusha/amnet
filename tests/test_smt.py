@@ -1,6 +1,6 @@
 import numpy as np
 import amnet
-from amnet.util import r2f
+import amnet.vis
 
 import z3
 
@@ -170,10 +170,12 @@ class TestSmt(unittest.TestCase):
     def test_SmtEncoder_triplexer(self):
         np.random.seed(1)
 
-        TOTAL_RUNS=10
+        TOTAL_RUNS=5
 
+        #print ""
         for iter in range(TOTAL_RUNS):
-            print "Testing random triplexer [%d/%d]..." % (iter+1, TOTAL_RUNS),
+            #print "Testing random triplexer [%d/%d]..." % (iter+1, TOTAL_RUNS),
+
             # create a random triplexer
             x = amnet.Variable(1, name='x')
 
@@ -196,7 +198,40 @@ class TestSmt(unittest.TestCase):
                 onvals=onvals,
                 true_f=true_tri
             )
-            print "done!"
+            #print "done!"
+
+    def test_SmtEncoder_dag(self):
+        xyz = amnet.Variable(3, name='xyz')
+        x = amnet.atoms.select(xyz, 0)
+        yz = amnet.Linear(
+            np.array([[0, 1, 0], [0, 0, 1]]),
+            xyz
+        )
+
+        maxyz = amnet.atoms.max_all(yz)
+        twoxp1 = amnet.Affine(
+            np.array([[2]]),
+            x,
+            np.array([1])
+        )
+        twox = amnet.atoms.add2(x, x)
+        threex = amnet.atoms.add2(x, twox)
+        fivexp1 = amnet.atoms.add2(twoxp1, threex)
+        phi = amnet.atoms.add2(fivexp1, maxyz)
+
+        def true_dag(fpin):
+            x, y, z = fpin
+            return 5*x + 1 + max(y, z)
+
+        self.validate_outputs(
+            phi=phi,
+            onvals=itertools.product(self.floatvals2, repeat=3),
+            true_f=true_dag
+        )
+
+        # visualize dag
+        #dot = amnet.vis.amn2gv(phi, ctx=None, title='dag')
+        #dot.render(filename='dag.gv', directory='vis')
 
 
 if __name__ == '__main__':
