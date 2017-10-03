@@ -107,6 +107,66 @@ class TestSmt(unittest.TestCase):
             true_f=true_mu
         )
 
+    def test_SmtEncoder_max_all_2(self):
+        xy = amnet.Variable(2, name='xy')
+        phi_max2 = amnet.atoms.max_all(xy)
+        self.assertEqual(phi_max2.indim, 2)
+
+        def true_max2(fpin):
+            x, y = fpin
+            return max(x, y)
+
+        self.validate_outputs(
+            phi=phi_max2,
+            onvals=itertools.product(self.floatvals, repeat=phi_max2.indim),
+            true_f=true_max2
+        )
+
+    def test_SmtEncoder_min_all_2(self):
+        xy = amnet.Variable(2, name='xy')
+        phi_min2 = amnet.atoms.min_all(xy)
+        self.assertEqual(phi_min2.indim, 2)
+
+        def true_min2(fpin):
+            x, y = fpin
+            return min(x, y)
+
+        self.validate_outputs(
+            phi=phi_min2,
+            onvals=itertools.product(self.floatvals, repeat=phi_min2.indim),
+            true_f=true_min2
+        )
+
+    def test_SmtEncoder_max_all_3_small(self):
+        xyz = amnet.Variable(3, name='xy')
+        phi_max3 = amnet.atoms.max_all(xyz)
+        self.assertEqual(phi_max3.indim, 3)
+
+        def true_max3(fpin):
+            x, y, z = fpin
+            return max(x, y, z)
+
+        self.validate_outputs(
+            phi=phi_max3,
+            onvals=itertools.product(self.floatvals2, repeat=phi_max3.indim),
+            true_f=true_max3
+        )
+
+    def test_SmtEncoder_min_all_3_small(self):
+        xyz = amnet.Variable(3, name='xy')
+        phi_min3 = amnet.atoms.min_all(xyz)
+        self.assertEqual(phi_min3.indim, 3)
+
+        def true_min3(fpin):
+            x, y, z = fpin
+            return min(x, y, z)
+
+        self.validate_outputs(
+            phi=phi_min3,
+            onvals=itertools.product(self.floatvals2, repeat=phi_min3.indim),
+            true_f=true_min3
+        )
+
     def test_SmtEncoder_triplexer(self):
         np.random.seed(1)
 
