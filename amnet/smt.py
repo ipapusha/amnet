@@ -290,6 +290,14 @@ class SmtEncoder(object):
         name = self.ctx.name_of(phi)
         return self.vars[name]
 
+    def var_of_input(self):
+        """
+        Returns z3 variable (as a list) associated with the input
+        to the embedded context
+        """
+        name = self.ctx.name_of_input()
+        return self.vars[name]
+
     def _init_vars(self):
         assert self.ctx.is_valid()
         assert self.ctx.only_one_input()
