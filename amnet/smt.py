@@ -282,31 +282,99 @@ class SmtEncoder(object):
                 sz=phi.outdim
             )
 
+    def _link_affine(self, phi, include_bterm=True):
+        assert isinstance(phi, amnet.Affine) or \
+               isinstance(phi, amnet.Linear)
+
+        m, n = phi.w.shape
+        assert m >= 1 and n >= 1
+
+        # extract children
+        yvar = self.var_of(phi)
+        xvar = self.var_of(phi.x)
+        assert (len(yvar) == m) and (len(xvar) == n)
+
+        # go row-by-row of w
+        for i in range(m):
+            rowi = phi.w[i, :]
+            assert len(rowi) == n
+
+            rowsum = z3.Sum([wij * xj
+                             for wij, xj in izip(rowi, xvar)
+                             if wij != 0])
+
+            if include_bterm:
+                assert isinstance(phi, amnet.Affine), \
+                    'Warning: tried to encode bterm in non-Affine'
+                self.solver.add(yvar[i] == (rowsum + phi.b[i]))
+            else:
+                self.solver.add(yvar[i] == rowsum)
+
+    def _link_mu(self, phi):
+        assert isinstance(phi, amnet.Mu)
+
+        # check dimensions
+        wvar = self.var_of(phi)
+        xvar = self.var_of(phi.x)
+        yvar = self.var_of(phi.y)
+        zvar = self.var_of(phi.z)
+        assert len(xvar) == len(yvar) and \
+               len(zvar) == 1
+        assert len(wvar) == len(xvar)
+
+        # go by-element of w
+        for i in range(len(wvar)):
+            self.solver.add(
+                wvar[i] == z3.If(zvar[0] <= 0, xvar[i], yvar[i])
+            )
+
+    def _link_stack(self, phi):
+        assert isinstance(phi, amnet.Stack)
+
+        # check dimensions
+        wvar = self.var_of(phi)
+        xvar = self.var_of(phi.x)
+        yvar = self.var_of(phi.y)
+        assert len(wvar) == len(xvar) + len(yvar)
+
+        # go by-element of w
+        for left, right in izip(wvar, chain(xvar, yvar)):
+            self.solver.add(left == right)
+
+    def _link_constant(self, phi):
+        assert isinstance(phi, amnet.Constant)
+
+        # *overwrite* the output variable of phi to be a z3 RealVal
+        assert self.ctx.is_valid()
+        name = self.ctx.name_of(phi)
+
+        assert len(phi.b) == len(self.vars[name])  # pre-overwrite
+        self.vars[name] = [z3.RealVal(bi) for bi in phi.b]
+        assert self.ctx.is_valid()  # post-overwrite
+
     def _encode(self):
         """
         encodes the relationship between the nodes
         by iterating through the context
         """
         for name, phi in self.ctx.symbols.items():
-            # z3 output variable for this node
-            outvar = self.var_of(name)
-            assert outvar is self.vars[name]
-            assert len(outvar) == phi.outdim
-
-            # z3 input variables for child nodes
-            xvar = self.var_of(phi.x) if hasattr(phi, 'x') else None
-            yvar = self.var_of(phi.y) if hasattr(phi, 'y') else None
-            zvar = self.var_of(phi.z) if hasattr(phi, 'z') else None
-
-            if hasattr(phi, 'x'):
-                pass
-            if hasattr(phi, 'y'):
-                assert isinstance(phi, amnet.Mu) or \
-                       isinstance(phi, amnet.Stack)
-                pass
-            if hasattr(phi, 'z'):
-                assert isinstance(phi, amnet.Mu)
-                pass
+            # the checking order should go *up* the class hierarchy
+            if isinstance(phi, amnet.Variable):
+                pass # nothing to do
+            elif isinstance(phi, amnet.Linear):
+                self._link_affine(phi, include_bterm=False)
+            elif isinstance(phi, amnet.Constant):
+                self._link_constant(phi)
+            elif isinstance(phi, amnet.Affine):
+                self._link_affine(phi, include_bterm=True)
+            elif isinstance(phi, amnet.Mu):
+                self._link_mu(phi)
+            elif isinstance(phi, amnet.Stack):
+                self._link_stack(phi)
+            elif isinstance(phi, amnet.Amn):
+                assert False, 'Failure: do not know how to encode an Amn'
+            else:
+                assert False
 
 
 # class SmtEncoder(object):
