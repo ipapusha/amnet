@@ -249,21 +249,39 @@ class NamingContext(object):
 
 
 class SmtEncoder(object):
-    def __init__(self, ctx, solver=None):
-        # save the context
-        self.ctx = ctx
-
-        assert self.ctx.is_valid()
-        assert self.ctx.only_one_input() # input node
-
+    def __init__(self, phi=None, ctx=None, solver=None):
         # initialize new SMT solver if needed
         if solver is None:
             solver = z3.Solver()
         self.solver = solver
 
-        # initialize variables
-        self.vars = dict() # name -> RealVector
-        self._init_vars()
+        # init from context
+        if ctx is not None:
+            self.encode_from_ctx(ctx)  # use existing context
+        elif phi is not None:
+            self.encode_from_amn(phi)  # create new default context
+        else:
+            raise Exception('Either ctx or phi must be provided')
+
+    def encode_from_ctx(self, ctx):
+        """
+        Encodes the AMN using the specified context
+        This is the preferred way to init, although a bit verbose
+        """
+        self.ctx = ctx
+        self.vars = dict()  # name -> RealVector
+        self._init_vars()   # initialize z3 vars
+        assert self.ctx.is_valid()
+        assert self.ctx.only_one_input()
+
+        self._encode()      # do the encoding work
+
+    def encode_from_amn(self, phi):
+        """
+        Creates a default naming context, and encodes the AMN
+        """
+        defaultctx = NamingContext(phi)
+        self.encode_from_ctx(ctx=defaultctx)
 
     def var_of(self, phi):
         """
