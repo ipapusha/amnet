@@ -92,7 +92,7 @@ def main():
     correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    tf_prediction = 0 # used to check correct behavior
+    tf_predictions = 0 # used to check correct behavior
 
 
     # start the session
@@ -113,7 +113,8 @@ def main():
         print("\nTraining complete!")
         print(sess.run(accuracy, feed_dict={x: test_pca_images, y: test_labels}))
 
-        tf_prediction = y_relu.eval(feed_dict={x: [test_pca_images[0]]}, session=sess)[0]
+        # grab non regularized output to compare to amnet
+        tf_predictions = y_relu.eval(feed_dict={x: test_pca_images}, session=sess)
 
         weights, biass = tf_utils.get_vars(tf.trainable_variables(), sess)
 
@@ -121,8 +122,8 @@ def main():
     nn = tf_utils.relu_amn(weights, biass)
 
     # check if the networks execute are the same
-    for image in test_pca_images:
-        amnet_prediction = nn.eval(test_pca_images[0])
+    for image, tf_prediction in zip(test_pca_images, tf_predictions):
+        amnet_prediction = nn.eval(image)
         diff = abs(sum(amnet_prediction) - sum(tf_prediction))
         assert(diff < 0.0001)
     print("Tests passed")
