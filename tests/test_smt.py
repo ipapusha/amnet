@@ -284,6 +284,11 @@ class TestSmt(unittest.TestCase):
         self.assertEqual(z1.outdim, 1)
         self.assertEqual(z2.outdim, 1)
 
+        self.assertEqual(phi_and.outdim, 2)
+        self.assertEqual(phi_or.outdim, 2)
+        self.assertEqual(phi_xor.outdim, 2)
+        self.assertEqual(phi_not.outdim, 2)
+
         # true gate functions
         def true_and(fpin):
             return fpin[0:2] if (fpin[4] <= 0 and fpin[5] <= 0) else fpin[2:4]
@@ -307,6 +312,74 @@ class TestSmt(unittest.TestCase):
         self.validate_outputs(phi=phi_xor, onvals=onvals, true_f=true_xor)
         self.validate_outputs(phi=phi_not, onvals=onvals, true_f=true_not)
 
+    def test_SmtEncoder_cmp(self):
+        xyz = amnet.Variable(2+2+1, name='xyz')
+        x = amnet.Linear(
+            np.eye(2, 5, 0),
+            xyz
+        )
+        y = amnet.Linear(
+            np.eye(2, 5, 2),
+            xyz
+        )
+        z = amnet.atoms.select(xyz, 4)
+
+        phi_eq = amnet.atoms.cmp_eq(x, y, z)
+        phi_neq = amnet.atoms.cmp_neq(x, y, z)
+        phi_ge = amnet.atoms.cmp_ge(x, y, z)
+        phi_gt = amnet.atoms.cmp_gt(x, y, z)
+        phi_le = amnet.atoms.cmp_le(x, y, z)
+        phi_lt = amnet.atoms.cmp_lt(x, y, z)
+
+        # check dimensions
+        self.assertEqual(xyz.outdim, 5)
+        self.assertEqual(x.outdim, 2)
+        self.assertEqual(y.outdim, 2)
+        self.assertEqual(z.outdim, 1)
+
+        self.assertEqual(phi_eq.outdim, 2)
+        self.assertEqual(phi_neq.outdim, 2)
+        self.assertEqual(phi_ge.outdim, 2)
+        self.assertEqual(phi_gt.outdim, 2)
+        self.assertEqual(phi_le.outdim, 2)
+        self.assertEqual(phi_lt.outdim, 2)
+
+        # true cmp functions
+        def true_eq(fpin):
+            x, y, z = fpin[0:2], fpin[2:4], fpin[4]
+            return x if z == 0 else y
+
+        def true_neq(fpin):
+            x, y, z = fpin[0:2], fpin[2:4], fpin[4]
+            return x if z != 0 else y
+
+        def true_ge(fpin):
+            x, y, z = fpin[0:2], fpin[2:4], fpin[4]
+            return x if z >= 0 else y
+
+        def true_gt(fpin):
+            x, y, z = fpin[0:2], fpin[2:4], fpin[4]
+            return x if z > 0 else y
+
+        def true_le(fpin):
+            x, y, z = fpin[0:2], fpin[2:4], fpin[4]
+            return x if z <= 0 else y
+
+        def true_lt(fpin):
+            x, y, z = fpin[0:2], fpin[2:4], fpin[4]
+            return x if z < 0 else y
+
+        # evaluate
+        vals = np.array([1, -2, -3, 4])
+        sels = itertools.product([-1.1, -0.5, 0, 0.0, 0.01, 1, 12.0], repeat=1)
+        onvals = [np.concatenate((vals, sel), axis=0) for sel in sels]
+
+        self.validate_outputs(phi=phi_eq, onvals=onvals, true_f=true_eq)
+        self.validate_outputs(phi=phi_neq, onvals=onvals, true_f=true_neq)
+        self.validate_outputs(phi=phi_ge, onvals=onvals, true_f=true_ge)
+        self.validate_outputs(phi=phi_gt, onvals=onvals, true_f=true_gt)
+        self.validate_outputs(phi=phi_le, onvals=onvals, true_f=true_le)
+        self.validate_outputs(phi=phi_lt, onvals=onvals, true_f=true_lt)
 
 
 if __name__ == '__main__':
