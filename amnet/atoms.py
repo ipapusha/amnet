@@ -398,8 +398,8 @@ def gate_not(x, y, z):
     assert _validdims_mu(x, y, z)
     return amnet.Mu(
         y,
-        z,
-        x
+        x,
+        z
     )
 
 

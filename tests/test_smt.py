@@ -259,6 +259,54 @@ class TestSmt(unittest.TestCase):
             true_f=true_relu
         )
 
+    def test_SmtEncoder_gates(self):
+        xy_z1z2 = amnet.Variable(2+2+1+1, name='xyz1z2')
+        x = amnet.Linear(
+            np.eye(2, 6, 0),
+            xy_z1z2
+        )
+        y = amnet.Linear(
+            np.eye(2, 6, 2),
+            xy_z1z2
+        )
+        z1 = amnet.atoms.select(xy_z1z2, 4)
+        z2 = amnet.atoms.select(xy_z1z2, 5)
+
+        phi_and = amnet.atoms.gate_and(x, y, z1, z2)
+        phi_or = amnet.atoms.gate_or(x, y, z1, z2)
+        phi_xor = amnet.atoms.gate_xor(x, y, z1, z2)
+        phi_not = amnet.atoms.gate_not(x, y, z1)
+
+        # check dimensions
+        self.assertEqual(xy_z1z2.outdim, 6)
+        self.assertEqual(x.outdim, 2)
+        self.assertEqual(y.outdim, 2)
+        self.assertEqual(z1.outdim, 1)
+        self.assertEqual(z2.outdim, 1)
+
+        # true gate functions
+        def true_and(fpin):
+            return fpin[0:2] if (fpin[4] <= 0 and fpin[5] <= 0) else fpin[2:4]
+
+        def true_or(fpin):
+            return fpin[0:2] if (fpin[4] <= 0 or fpin[5] <= 0) else fpin[2:4]
+
+        def true_xor(fpin):
+            return fpin[0:2] if ((fpin[4] <= 0) != (fpin[5] <= 0)) else fpin[2:4]
+
+        def true_not(fpin): # ignores last input
+            return fpin[2:4] if (fpin[4] <= 0) else fpin[0:2]
+
+        # evaluate
+        vals = np.array([1, -2, -3, 4])
+        sels = itertools.product([-1, 0, 1], repeat=2)
+        onvals = [np.concatenate((vals, sel), axis=0) for sel in sels]
+
+        self.validate_outputs(phi=phi_and, onvals=onvals, true_f=true_and)
+        self.validate_outputs(phi=phi_or, onvals=onvals, true_f=true_or)
+        self.validate_outputs(phi=phi_xor, onvals=onvals, true_f=true_xor)
+        self.validate_outputs(phi=phi_not, onvals=onvals, true_f=true_not)
+
 
 
 if __name__ == '__main__':
