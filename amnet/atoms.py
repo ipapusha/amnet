@@ -3,7 +3,77 @@ import amn as amnet
 
 
 ################################################################################
-# utility methods
+# dimension and abstraction utilities
+################################################################################
+
+def select(phi, k):
+    """ returns kth component of phi """
+    assert (0 <= phi.outdim) and (k < phi.outdim)
+
+    # optimization: prevent creating an affine transformation
+    #               if phi is one-dimensional
+    if phi.outdim == 1 and k == 0:
+        return phi
+
+    # otherwise, select the appropriate component
+    return amnet.Linear(
+        np.eye(1, phi.outdim, k),
+        phi
+    )
+
+
+def to_list(phi):
+    """ converts the output components of phi to a list """
+    assert phi.outdim >= 1
+    return [select(phi, k) for k in range(phi.outdim)]
+
+
+def from_list(phi_list):
+    """returns Stack(...Stack(phi_list[0], phi_list[1]), ... phi_list[-1]) """
+    assert _valid_nonempty_Amn_list(phi_list)
+
+    def stack2(x, y):
+        return amnet.Stack(x, y)
+
+    return amnet.util.foldl(stack2, phi_list[0], phi_list[1:])
+
+# alternative implementation of from_list
+# (previously make_stack(phi_list))
+#
+# def from_list(phi_list):
+#     assert _valid_nonempty_Amn_list(phi_list)
+#     if len(phi_list) == 1:
+#         return phi_list[0]
+#     return amnet.Stack(phi_list[0], from_list(phi_list[1:]))
+
+
+def thread_over(f, *args):
+    """
+    Threads f over args
+
+    Example:
+        thread_over(f, x, y) gives a 
+        vector z with components z_i = f(x_i, y_i)
+    """
+    assert len(args) >= 1
+    assert amnet.util.allsame([arg.outdim for arg in args])
+    n = args[0].outdim
+    m = len(args)
+
+    # references to internal components/ "transposed" version of args
+    # i.e., xs[i][j] is the ith component of the jth argument
+    #       xs[i] is the list of ith components to send to f
+    xs = [[select(args[j], i) for j in range(m)] for i in range(n)]
+
+    # compute each component of the output
+    outputs = [f(*(xs[i])) for i in range(n)]
+
+    # return a stack of all components
+    return from_list(outputs)
+
+
+################################################################################
+# dimension checking methods
 ################################################################################
 
 def _validdims_mu(x, y, z):
@@ -17,310 +87,184 @@ def _validdims_gate(x, y, z1, z2):
            (z2.outdim == 1)
 
 
+def _valid_nonempty_Amn_list(phi_list):
+    return (not isinstance(phi_list, amnet.Amn)) and \
+           (len(phi_list) >= 1) and \
+           (isinstance(phi_list[0], amnet.Amn))
+
+
 ################################################################################
-# simple affine transformations
+# unary operations
 ################################################################################
 
-def make_neg(x):
-    assert x.outdim >= 1
-    return amnet.AffineTransformation(
-        np.diag(-np.ones(x.outdim)),
-        x,
-        np.zeros(x.outdim)
+def identity(phi):
+    """returns phi, wrapped in an identity affine transformation"""
+    return amnet.Linear(
+        np.eye(phi.outdim, phi.outdim),
+        phi
     )
 
 
-def make_stack(phi_list):
-    assert not(isinstance(phi_list, amnet.Amn)) # has to be a list of Amns
-    assert len(phi_list) >= 1
-    assert isinstance(phi_list[0], amnet.Amn)
+def neg(phi):
+    """returns the negative of phi """
+    assert phi.outdim >= 1
+    # XXX: make more efficient by peeking inside Affine, Linear, Stack, and Mu
+    return amnet.Linear(
+        np.diag(-np.ones(phi.outdim)),
+        phi
+    )
 
-    if len(phi_list) == 1:
-        return phi_list[0]
-    return amnet.Stack(phi_list[0], make_stack(phi_list[1:]))
 
+################################################################################
+# binary operations (Table 1)
+################################################################################
 
-def make_add(x, y):
+def add2(x, y):
+    """main n-d add method on which all add routines rely"""
     assert x.outdim == y.outdim
     n = x.outdim
 
     xy = amnet.Stack(x, y)
 
-    return amnet.AffineTransformation(
+    return amnet.Linear(
         np.concatenate((np.eye(n), np.eye(n)), axis=1),
-        xy,
-        np.zeros(n)
+        xy
     )
 
-def make_sub(x, y):
+
+def add_list(phi_list):
+    """returns (...(phi_list[0] + phi_list[1]) + ...) + phi_list[len(phi_list)]"""
+    assert _valid_nonempty_Amn_list(phi_list)
+    return amnet.util.foldl(add2, phi_list[0], phi_list[1:])
+
+
+def add_all(phi):
+    """ returns the sum of all components of phi """
+    assert phi.outdim >= 1
+    return add_list(to_list(phi))
+
+
+def sub2(x, y):
     assert x.outdim == y.outdim
     n = x.outdim
 
     xy = amnet.Stack(x, y)
 
-    return amnet.AffineTransformation(
+    return amnet.Linear(
         np.concatenate((np.eye(n), -np.eye(n)), axis=1),
-        xy,
-        np.zeros(n)
+        xy
     )
 
 
-
-################################################################################
-# Gates from Table 2
-################################################################################
-
-def make_and(x, y, z1, z2):
-    assert _validdims_gate(x, y, z1, z2)
-    return amnet.Mu(
-        amnet.Mu(
-            x,
-            y,
-            z1,
-        ),
-        y,
-        z2
-    )
-
-
-def make_or(x, y, z1, z2):
-    assert _validdims_gate(x, y, z1, z2)
-    return amnet.Mu(
-        x,
-        amnet.Mu(
-            x,
-            y,
-            z1
-        ),
-        z2
-    )
-
-
-def make_not(x, y, z):
-    assert _validdims_mu(x, y, z)
-    return amnet.Mu(
-        y,
-        z,
-        x
-    )
-
-
-def make_xor(x, y, z1, z2):
-    assert _validdims_gate(x, y, z1, z2)
-    return amnet.Mu(
-        amnet.Mu(
-            y,
-            x,
-            z1
-        ),
-        amnet.Mu(
-            x,
-            y,
-            z1
-        ),
-        z2
-    )
-
-
-################################################################################
-# Comparisons from Table 2
-################################################################################
-
-def make_le(x, y, z):
-    assert _validdims_mu(x, y, z)
+def max2_1(x, y):
+    """ main 1-d max method on which all max routines rely """
+    assert x.outdim == 1 and y.outdim == 1
     return amnet.Mu(
         x,
         y,
-        z
+        sub2(y, x)
     )
 
 
-def make_ge(x, y, z):
-    assert _validdims_mu(x, y, z)
-    return amnet.Mu(
+def max2(x, y):
+    """ returns vector with ith component equal to max(x_i, y_i)"""
+    assert x.outdim == y.outdim
+    assert x.outdim >= 1
+
+    return thread_over(
+        max2_1,
         x,
-        y,
-        make_neg(z)
+        y
     )
 
 
-def make_lt(x, y, z):
-    assert _validdims_mu(x, y, z)
-    return make_not(
-        x,
-        y,
-        make_neg(z)
-    )
+def max_list(phi_list):
+    """ 
+    Returns vector of same size as phi_list[0]
+
+    Example:
+        if phi_list evaluates to [[1,2,3], [4,-5,6]]
+        then max_list(phi_list) evaluates to [4, 2, 6]
+    """
+    assert _valid_nonempty_Amn_list(phi_list)
+    return amnet.util.foldl(max2, phi_list[0], phi_list[1:])
 
 
-def make_gt(x, y, z):
-    assert _validdims_mu(x, y, z)
-    return make_not(
-        x,
-        y,
-        z
-    )
+def max_all(phi):
+    """ 
+    Returns the maximum element of phi 
+    
+    Example:
+        if phi evaluates to [1,2,3],
+        then max_all(phi) evaluates to 3
+    """
+    assert phi.outdim >= 1
+    return max_list(to_list(phi))
 
 
-def make_eq(x, y, z):
-    assert _validdims_mu(x, y, z)
-    return make_and(
-        x,
-        y,
-        z,
-        make_neg(z)
-    )
-
-
-def make_neq(x, y, z):
-    assert _validdims_mu(x, y, z)
-    return make_and(
-        y,
-        x,
-        z,
-        make_neg(z)
-    )
-
-
-################################################################################
-# deprecated
-################################################################################
-def make_const(b, invar):
-    outdim = len(b)
-    indim = invar.outdim
-    return amnet.AffineTransformation(
-        np.zeros((outdim, indim)),
-        invar,
-        b
-    )
-
-
-################################################################################
-# Methods from Table 1
-################################################################################
-
-def make_relu(phi):
+def relu(phi):
     """ returns vector with ith component equal to max(phi_i, 0) """
-    n = phi.outdim
-    relus = [None for i in range(n)]
+    assert phi.outdim >= 1
 
-    # populate each component
-    for i in range(n):
-        a1 = amnet.AffineTransformation(
-            np.eye(1, n, i),
-            phi,
-            np.array([0])
-        )
-        a2 = amnet.Constant(np.array([0]))
-        a3 = amnet.AffineTransformation(
-            -np.eye(1, n, i),
-            phi,
-            np.array([0])
-        )
-        #print a1.indim, a2.indim, a3.indim
-        #print a1.outdim, a2.outdim, a3.outdim
-        relus[i] = amnet.Mu(a1, a2, a3)
-        assert relus[i].outdim == 1
+    zero = amnet.Constant(phi, np.zeros(phi.outdim))
+    assert zero.outdim == phi.outdim
 
-    # return a stack of all components
-    return make_stack(relus)
-
-
-def make_max2(phi):
-    assert phi.outdim == 2
-
-    a1 = amnet.AffineTransformation(
-        np.array([[1, 0]]),
+    return thread_over(
+        max2_1,
         phi,
-        np.array([0])
-    )
-    a2 = amnet.AffineTransformation(
-        np.array([[0, 1]]),
-        phi,
-        np.array([0])
-    )
-    a3 = amnet.AffineTransformation(
-        np.array([[-1, 1]]),
-        phi,
-        np.array([0])
+        zero
     )
 
-    return amnet.Mu(a1, a2, a3)
 
-
-def make_max3(phi):
-    assert phi.outdim == 3
-
-    phi0 = amnet.select(phi, 0)
-    phi12 = amnet.AffineTransformation(
-        np.eye(2, 3, 1),
-        phi,
-        np.zeros(2)
+def min2_1(x, y):
+    """ main 1-d max method on which all min routines rely """
+    assert x.outdim == 1 and y.outdim == 1
+    return amnet.Mu(
+        y,
+        x,
+        sub2(y, x)
     )
 
-    max12 = make_max2(phi12)
-    phi0_max12 = amnet.Stack(phi0, max12)
 
-    return make_max2(phi0_max12)
+def min2(x, y):
+    """ returns vector with ith component equal to max(x_i, y_i)"""
+    assert x.outdim == y.outdim
+    assert x.outdim >= 1
 
-
-def make_max4(phi):
-    """ uses fewer mus than make_max(phi)"""
-    assert phi.outdim == 4
-
-    phi01 = amnet.AffineTransformation(
-        np.eye(2, 4, 0),
-        phi,
-        np.zeros(2)
-    )
-    phi23 = amnet.AffineTransformation(
-        np.eye(2, 4, 2),
-        phi,
-        np.zeros(2)
+    return thread_over(
+        min2_1,
+        x,
+        y
     )
 
-    max01 = make_max2(phi01)
-    max23 = make_max2(phi23)
-    max01_max23 = amnet.Stack(max01, max23)
 
-    return make_max2(max01_max23)
-
-
-def make_max(phi):
-    n = phi.outdim
-    if n <= 1: return phi
-    if n == 2: return make_max2(phi)
-
-    phi_0 = amnet.select(phi, 0)
-    phi_rest = amnet.AffineTransformation(
-        np.eye(n-1, n, 1),
-        phi,
-        np.zeros(n-1)
-    )
-
-    assert phi_rest.outdim == n-1
-
-    max_rest = make_max(phi_rest)
-    return make_max2(amnet.Stack(phi_0, max_rest))
+def min_list(phi_list):
+    assert _valid_nonempty_Amn_list(phi_list)
+    return amnet.util.foldl(min2, phi_list[0], phi_list[1:])
 
 
-def make_max_aff(A, b, phi):
+def min_all(phi):
+    assert phi.outdim >= 1
+    return min_list(to_list(phi))
+
+
+def max_aff(A, b, phi):
     """ returns an AMN that evaluates to 
         max_i(sum_j a_{ij} phi_j + b_i) """
     (m, n) = A.shape
     assert len(b) == m
     assert phi.outdim == n
 
-    phi_aff = amnet.AffineTransformation(
+    phi_aff = amnet.Affine(
         A,
         phi,
         b
     )
 
-    return make_max(phi_aff)
+    return max_all(phi_aff)
 
 
-def make_triplexer(phi, a, b, c, d, e, f):
+def triplexer(phi, a, b, c, d, e, f):
     assert phi.outdim == 1
     assert all([len(p) == 4 for p in [a, b, c, d, e, f]])
 
@@ -331,17 +275,17 @@ def make_triplexer(phi, a, b, c, d, e, f):
 
     # Layer 1 weights
     for i in range(3):
-        x[i] = amnet.AffineTransformation(
+        x[i] = amnet.Affine(
             np.array(a[i]).reshape((1, 1)),
             phi,
             np.array(b[i]).reshape((1,))
         )
-        y[i] = amnet.AffineTransformation(
+        y[i] = amnet.Affine(
             np.array(c[i]).reshape((1, 1)),
             phi,
             np.array(d[i]).reshape((1,))
         )
-        z[i] = amnet.AffineTransformation(
+        z[i] = amnet.Affine(
             np.array(e[i]).reshape((1, 1)),
             phi,
             np.array(f[i]).reshape((1,))
@@ -356,17 +300,17 @@ def make_triplexer(phi, a, b, c, d, e, f):
         )
 
     # Layer 2 weights
-    x[3] = amnet.AffineTransformation(
+    x[3] = amnet.Affine(
         np.array(a[3]).reshape((1, 1)),
         w[1],
         np.array(b[3]).reshape((1,))
     )
-    y[3] = amnet.AffineTransformation(
+    y[3] = amnet.Affine(
         np.array(c[3]).reshape((1, 1)),
         w[2],
         np.array(d[3]).reshape((1,))
     )
-    z[3] = amnet.AffineTransformation(
+    z[3] = amnet.Affine(
         np.array(e[3]).reshape((1, 1)),
         w[0],
         np.array(f[3]).reshape((1,))

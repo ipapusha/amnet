@@ -12,9 +12,9 @@ def test1():
     b3 = np.array([0])
 
     x = amnet.Variable(2, name='x')
-    a1 = amnet.AffineTransformation(w1, x, b1)
-    a2 = amnet.AffineTransformation(w2, x, b2)
-    a3 = amnet.AffineTransformation(w3, x, b3)
+    a1 = amnet.Affine(w1, x, b1)
+    a2 = amnet.Affine(w2, x, b2)
+    a3 = amnet.Affine(w3, x, b3)
 
     phimax = amnet.Mu(a1, a2, a3)
     print phimax
@@ -29,7 +29,7 @@ def test2():
 
     w3 = np.array([[-1, 1]])
     b3 = np.array([0])
-    a3 = amnet.AffineTransformation(w3, amnet.Vcat(x1, x2), b3)
+    a3 = amnet.Affine(w3, amnet.Vcat(x1, x2), b3)
 
     phimax = amnet.Mu(a1, a2, a3)
     print phimax

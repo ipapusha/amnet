@@ -6,25 +6,30 @@ import numpy as np
 ################################################################################
 
 class Amn(object):
+    """
+    Abstract class that every AMN node must implement.
+    """
     def __init__(self, outdim=0, indim=0):
         self.outdim = outdim
         self.indim = indim
-
-    def __add__(self, other):
-        return NotImplemented
 
     def eval(self, inp):
         return NotImplemented
 
 
 class Variable(Amn):
+    """
+    A Variable instance is the sole leaf of an AMN tree.
+    
+    It has a name, evaluates like the identity function, 
+    and has the same input and output dimensions.
+    """
     def __init__(self, outdim=1, name='Variable'):
-        # a variable has the same input and output sizes
         super(Variable, self).__init__(outdim=outdim, indim=outdim)
         self.name = name
 
     def __str__(self):
-        return self.name + '(' + str(self.outdim) + ')'
+        return '%s(%d)' % (self.name, self.outdim)
 
     def eval(self, inp):
         assert self.indim == self.outdim
@@ -32,44 +37,67 @@ class Variable(Amn):
         return inp
 
 
-class AffineTransformation(Amn):
+class Affine(Amn):
+    """
+    Affine encodes an alpha node, and  
+    evaluates to alpha.eval(inp) = W * x(inp) + b.
+        
+    w: an m-by-n numpy array
+    x: a pointer to an AMN with outdim = n
+    b: an m-dimensional numpy array
+    """
     def __init__(self, w, x, b):
         assert w.ndim == 2
-        super(AffineTransformation, self).__init__(outdim=w.shape[0], indim=w.shape[1])
-        assert len(b) == self.outdim
-        assert x.outdim == self.indim
+        assert x.outdim == w.shape[1]
+        assert len(b) == w.shape[0]
+
+        super(Affine, self).__init__(outdim=w.shape[0], indim=x.indim)
 
         self.w = np.copy(w)
         self.x = x
         self.b = np.copy(b).flatten()
 
     def __str__(self):
-        return str(self.w) + ' * ' + str(self.x) + ' + ' + str(self.b)
+        return 'Affine(w=%s, x=%s, b=%s)' % \
+               (str(self.w.tolist()), str(self.x), str(self.b.tolist()))
 
     def eval(self, inp):
+        assert len(inp) == self.indim
         xv = self.x.eval(inp)
-        assert len(xv) == self.indim
         return np.dot(self.w, xv) + self.b
 
 
 class Mu(Amn):
+    """
+    Mu encodes a multiplexing (or if-then-else) node, and
+    evaluates to mu.eval(inp) = if z(inp) <= 0 then x(inp) else y(inp).
+    
+    x: (select-true) a pointer to an AMN
+    y: (select-false) a pointer to an AMN  
+    z: (enable input) a pointer to an AMN
+    
+    The dimension rules are:
+    1) x, y, and z must all have the same indim.
+    2) x and y must have the same outdim.
+    3) z has outdim 1.
+    """
     def __init__(self, x, y, z):
         assert x.outdim == y.outdim
         assert z.outdim == 1
+        assert x.indim == y.indim and y.indim == z.indim
 
-        # TODO: I commented this out to work with Constant()
-        #assert (x.indim == y.indim) and (y.indim == z.indim)
-        #super(Mu, self).__init__(outdim=x.outdim, indim=x.indim)
-        super(Mu, self).__init__(outdim=x.outdim, indim=x.outdim)
+        super(Mu, self).__init__(outdim=x.outdim, indim=x.indim)
 
         self.x = x
         self.y = y
         self.z = z
 
     def __str__(self):
-        return 'Mu(%s, %s, %s)' % (str(self.x), str(self.y), str(self.z))
+        return 'Mu(%s, %s, %s)' % \
+               (str(self.x), str(self.y), str(self.z))
 
     def eval(self, inp):
+        assert len(inp) == self.indim
         zv = self.z.eval(inp)
         assert len(zv) == 1
         if zv <= 0:
@@ -78,31 +106,34 @@ class Mu(Amn):
             return self.y.eval(inp)
 
 
-class Constant(Amn):
-    def __init__(self, c):
-        assert c.ndim == 1
-        super(Constant, self).__init__(outdim=len(c), indim=0)
-        self.c = np.copy(c)
-
-    def __str__(self):
-        return 'Constant(%s)' % (str(self.c))
-
-    def eval(self, inp):
-        return self.c
-
-
 class Stack(Amn):
+    """
+    A Stack is an AMN node that evaluates to an ordered pair 
+    of its inputs. Care must be taken when evaluating,  
+    because stack.eval(inp) is semantically (x(inp), y(inp)). 
+    
+    In particular x and y must have the same indim. 
+    
+    Avoid stacking variables-- instead create a new variable of 
+    appropriate dimension.
+    
+    x: pointer to first component
+    y: pointer to second component
+    """
     def __init__(self, x, y):
-        # assert x.indim == y.indim
-        super(Stack, self).__init__(outdim=x.outdim + y.outdim, indim=x.outdim + y.outdim)
+        assert x.indim == y.indim
+        assert not(isinstance(x, Variable) and isinstance(y, Variable)), \
+            'stacking variables not supported'
+        super(Stack, self).__init__(outdim=x.outdim + y.outdim, indim=x.indim)
 
         self.x = x
         self.y = y
 
     def __str__(self):
-        return '[%s; %s]' % (str(self.x), str(self.y))
+        return 'Stack(%s, %s)' % (str(self.x), str(self.y))
 
     def eval(self, inp):
+        assert len(inp) == self.indim
         xv = self.x.eval(inp)
         yv = self.y.eval(inp)
 
@@ -112,209 +143,36 @@ class Stack(Amn):
 
 
 ################################################################################
-# various methods for composing
+# Convenience classes
 ################################################################################
 
-def _compose_aff_phi(aff, phi):
-    """ returns aff(phi) """
-    assert isinstance(aff, AffineTransformation)
-    assert phi.outdim == aff.indim
-    return AffineTransformation(
-        aff.w,
-        phi,
-        aff.b
-    )
-
-
-def _compose_aff_aff_simp(aff1, aff2):
-    """ returns aff1(aff2), simplified into one affine expression """
-    assert isinstance(aff1, AffineTransformation)
-    assert isinstance(aff2, AffineTransformation)
-    assert aff2.outdim == aff1.indim
-    return AffineTransformation(
-        np.dot(aff1.w, aff2.w),
-        aff2.x,
-        np.dot(aff1.w, aff2.b) + aff1.b
-    )
-
-
-def compose(phi1, phi2):
-    """ returns phi1(phi2) """
-    if isinstance(phi1, Variable):
-        return phi2
-    elif isinstance(phi1, AffineTransformation):
-        return _compose_aff_phi(phi1, phi2)
-    elif isinstance(phi1, Mu):
-        return Mu(
-            compose(phi2.x, phi2),
-            compose(phi2.y, phi2),
-            compose(phi2.z, phi2),
+class Constant(Affine):
+    def __init__(self, x, b):
+        m = len(b)
+        super(Constant, self).__init__(
+            np.zeros((m, x.outdim)),
+            x,
+            b
         )
 
-    assert False
+    def __str__(self):
+        return 'Constant(x=%s, b=%s)' % (str(self.x), str(self.b.tolist()))
+
+    def eval(self, inp):
+        # short-circuit evaluation
+        return self.b
 
 
-################################################################################
-# convenience methods for simplification
-################################################################################
+class Linear(Affine):
+    def __init__(self, w, x):
+        assert w.ndim == 2
+        assert x.outdim == w.shape[1]
 
-def simplify(phi):
-    assert isinstance(phi, Variable) or \
-           isinstance(phi, Mu) or \
-           isinstance(phi, AffineTransformation)
-
-    if isinstance(phi, Variable):
-        return phi
-
-    if isinstance(phi, Mu):
-        return Mu(
-            simplify(phi.x),
-            simplify(phi.y),
-            simplify(phi.z)
+        super(Linear, self).__init__(
+            w,
+            x,
+            np.zeros(w.shape[0])
         )
 
-    assert isinstance(phi, AffineTransformation)
-    alpha = phi
-
-    if isinstance(alpha.x, Variable):
-        return phi
-
-    if isinstance(alpha.x, Mu):
-        return Mu(
-            simplify(_compose_aff_phi(alpha, (alpha.x).x)),
-            simplify(_compose_aff_phi(alpha, (alpha.x).y)),
-            simplify((alpha.x).z)
-        )
-
-    assert isinstance(alpha.x, AffineTransformation)
-    return simplify(_compose_aff_aff_simp(alpha, alpha.x))
-
-
-def select(phi, k):
-    """ returns kth component of phi """
-    assert (0 <= phi.outdim) and (k < phi.outdim)
-    return AffineTransformation(
-        np.eye(1, phi.outdim, k),
-        phi,
-        np.zeros(1)
-    )
-
-
-def wrap_identity(phi):
-    """returns phi, wrapped in an identity affine transformation"""
-    return AffineTransformation(
-        np.eye(phi.outdim, phi.outdim),
-        phi,
-        np.zeros(phi.outdim)
-    )
-
-################################################################################
-# various methods for stacking
-################################################################################
-
-
-def _stack_var_var(v1, v2):
-    assert isinstance(v1, Variable) and \
-           isinstance(v2, Variable)
-
-    # if variable is the same, replicate it with an affine transformation
-    if v1.name == v2.name:
-        assert v1.outdim == v2.outdim
-        return AffineTransformation(
-            np.concatenate((np.eye(v1.outdim), np.eye(v2.outdim)), axis=0),
-            v1,
-            np.zeros(v1.outdim + v2.outdim)
-        )
-
-    # if variable is not the same, create a new variable
-    return Variable(
-        outdim=v1.outdim + v2.outdim,
-        name='<' + v1.name + ':' + v2.name + '>'
-    )
-
-
-def _stack_aff_aff(aff1, aff2):
-    assert isinstance(aff1, AffineTransformation) and \
-           isinstance(aff2, AffineTransformation)
-
-    (m1, n1) = (aff1.outdim, aff1.indim)
-    (m2, n2) = (aff2.outdim, aff2.indim)
-    w = np.bmat([[aff1.w, np.zeros((m1, n2))],
-                 [np.zeros((m2, n1)), aff2.w]])
-    b = np.concatenate((aff1.b, aff2.b), axis=0)
-    return AffineTransformation(
-        w,
-        stack(aff1.x, aff2.x),
-        b
-    )
-
-
-def _stack_aff_mu(aff, mu):
-    assert isinstance(aff, AffineTransformation) and \
-           isinstance(mu, Mu)
-    return Mu(
-        stack(aff, mu.x),
-        stack(aff, mu.y),
-        mu.z
-    )
-
-
-def _stack_mu_aff(mu, aff):
-    assert isinstance(aff, AffineTransformation) and \
-           isinstance(mu, Mu)
-    return Mu(
-        stack(mu.x, aff),
-        stack(mu.y, aff),
-        mu.z
-    )
-
-
-def _stack_mu_mu(mu1, mu2):
-    assert isinstance(mu1, Mu) and \
-           isinstance(mu2, Mu)
-
-    return Mu(
-        Mu(
-            stack(mu1.x, mu2.x),
-            stack(mu1.y, mu2.x),
-            mu1.z
-        ),
-        Mu(
-            stack(mu1.x, mu2.y),
-            stack(mu1.y, mu2.y),
-            mu1.z
-        ),
-        mu2.z
-    )
-
-
-def stack(phi1, phi2):
-    # TODO: need to be able to stack non-variables
-    if not(isinstance(phi1, Variable) and isinstance(phi2, Variable)):
-        return NotImplemented
-
-    # code below is wrong
-    if isinstance(phi1, Variable):
-        if isinstance(phi2, Variable):
-            # base case
-            return _stack_var_var(phi1, phi2)
-        elif isinstance(phi2, AffineTransformation):
-            return _stack_aff_aff(wrap_identity(phi1), phi2)
-        elif isinstance(phi2, Mu):
-            return _stack_aff_mu(wrap_identity(phi1), phi2)
-    elif isinstance(phi1, AffineTransformation):
-        if isinstance(phi2, Variable):
-            return _stack_aff_aff(phi1, wrap_identity(phi2))
-        elif isinstance(phi2, AffineTransformation):
-            return _stack_aff_aff(phi1, phi2)
-        elif isinstance(phi2, Mu):
-            return _stack_aff_mu(phi1, phi2)
-    elif isinstance(phi1, Mu):
-        if isinstance(phi2, Variable):
-            return _stack_mu_aff(phi1, wrap_identity(phi2))
-        elif isinstance(phi2, AffineTransformation):
-            return _stack_mu_aff(phi1, phi2)
-        elif isinstance(phi2, Mu):
-            return _stack_mu_mu(phi1, phi2)
-
-    assert False
+    def __str__(self):
+        return 'Linear(w=%s, x=%s)' % (str(self.w.tolist()), str(self.x))

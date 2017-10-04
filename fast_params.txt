@@ -1,0 +1,2 @@
+time z3 auto_config=false smt.auto_config=false smt.case_split=4 -smt2 esolver_5.smt2
+time z3 auto_config=false smt.case_split=4 -smt2 fsolver_5.smt2

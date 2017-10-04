@@ -10,6 +10,8 @@ import amnet
 import sys
 import unittest
 
+import z3
+
 
 class TestLyap(unittest.TestCase):
     @classmethod
@@ -43,14 +45,14 @@ class TestLyap(unittest.TestCase):
         z3.set_param('smt.case_split', 5)
         z3.set_param('smt.relevancy', 2)
 
-    def test_stability_search1(self):
+    def stability_search1(self):
         #Ad = self.Ad_osc
         Ad = self.Ad_met
         (n, _) = Ad.shape
         assert n == 2
 
         xsys = amnet.Variable(n, name='xsys')
-        phi = amnet.AffineTransformation(
+        phi = amnet.Affine(
             Ad,
             xsys,
             np.zeros(n)
@@ -63,14 +65,14 @@ class TestLyap(unittest.TestCase):
     def cvxpy(self):
         pass
 
-    def disprove_maxaff_local_lyapunov(self):
+    def test_disprove_maxaff_local_lyapunov(self):
         # a simple system
         Ad = self.Ad_diag
         (n, _) = Ad.shape
         assert n == 2
 
         xsys = amnet.Variable(n, name='xsys')
-        phi = amnet.AffineTransformation(
+        phi = amnet.Affine(
             Ad,
             xsys,
             np.zeros(n)

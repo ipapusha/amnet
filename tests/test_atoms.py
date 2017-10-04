@@ -3,7 +3,10 @@ import amnet
 
 import sys
 import unittest
-from itertools import chain, product
+import itertools
+
+from numpy.linalg import norm
+from itertools import product
 
 
 class TestAtoms(unittest.TestCase):
@@ -11,112 +14,122 @@ class TestAtoms(unittest.TestCase):
     def setUpClass(cls):
         print 'Setting up test floats.'
         cls.floatvals = np.concatenate(
-            (np.linspace(-5., 5., 11), np.linspace(-5., 5., 10)),
+            (np.linspace(-5., 5., 11),
+             np.linspace(-5., 5., 10)),
             axis=0
         )
         cls.floatvals2 = np.concatenate(
-            (np.linspace(-5., 5., 3), np.linspace(-.5, .5, 2)),
+            (np.linspace(-5., 5., 3),
+             np.linspace(-.5, .5, 2)),
             axis=0
         )
 
-    def test_make_add_make_sub(self):
-        xy = amnet.Variable(2, name='xy')
-        x = amnet.select(xy, 0)
-        y = amnet.select(xy, 1)
-        phi_add = amnet.atoms.make_add(x, y)
-        phi_sub = amnet.atoms.make_sub(x, y)
-
-        # true add
-        def true_add(xv, yv): return xv + yv
-        def true_sub(xv, yv): return xv - yv
-
-        # implemented add
-        for xv in self.floatvals:
-            for yv in self.floatvals:
-                xyv = np.array([xv, yv])
-                self.assertEqual(phi_add.eval(xyv), true_add(xv, yv))
-                self.assertEqual(phi_sub.eval(xyv), true_sub(xv, yv))
-
-    def test_make_max2(self):
+    def test_select(self):
         x = amnet.Variable(2, name='x')
-        phi_max2 = amnet.atoms.make_max2(x)
+        x0 = amnet.atoms.select(x, 0)
+        x1 = amnet.atoms.select(x, 1)
 
-        # true max2
-        def max2(x): return x[0] if x[0] > x[1] else x[1]
+        for (xv0, xv1) in product(self.floatvals, repeat=2):
+            xinp = np.array([xv0, xv1])
+            self.assertEqual(x0.eval(xinp), xv0)
+            self.assertEqual(x1.eval(xinp), xv1)
 
-        # implemented max2
-        for xv in self.floatvals:
-            for yv in self.floatvals:
-                xyv = np.array([xv, yv])
-                self.assertEqual(phi_max2.eval(xyv), max2(xyv))
+    def test_to_from_list(self):
+        x = amnet.Variable(2, name='x')
 
-    def test_make_max3(self):
+        w = np.array([[1, 2], [3, 4], [5, 6]])
+        b = np.array([7, 8, 9])
+        y = amnet.Affine(
+            w,
+            x,
+            b
+        )
+
+        self.assertEqual(y.outdim, 3)
+
+        ylist = amnet.atoms.to_list(y)
+        self.assertEqual(len(ylist), y.outdim)
+
+        ytilde = amnet.atoms.from_list(ylist)
+        self.assertEqual(ytilde.outdim, y.outdim)
+
+        for (xv0, xv1) in product(self.floatvals, repeat=2):
+            xinp = np.array([xv0, xv1])
+            yv = y.eval(xinp)
+            ylv = np.array([yi.eval(xinp) for yi in ylist]).flatten()  # note the flatten!
+            ytv = ytilde.eval(xinp)
+            self.assertAlmostEqual(norm(yv - ylv), 0)
+            self.assertAlmostEqual(norm(yv - ytv), 0)
+
+    def test_identity(self):
+        x = amnet.Variable(2, name='x')
+
+        w = np.array([[1, 2], [3, 4], [5, 6]])
+        b = np.array([7, 8, 9])
+
+        y = amnet.Affine(
+            w,
+            x,
+            b
+        )
+        self.assertEqual(y.outdim, 3)
+
+        z = amnet.atoms.neg(y)
+        self.assertEqual(z.outdim, y.outdim)
+
+        def aff(x): return np.dot(w, x) + b
+        for (xv0, xv1) in product(self.floatvals, repeat=2):
+            xinp = np.array([xv0, xv1])
+            yv = y.eval(xinp)
+            zv = z.eval(xinp)
+            self.assertAlmostEqual(norm(yv - aff(xinp)), 0)
+            self.assertAlmostEqual(norm(zv + aff(xinp)), 0)
+
+    def test_stack(self):
         x = amnet.Variable(3, name='x')
-        phi_max3 = amnet.atoms.make_max3(x)
 
-        # true max3
-        def max3(x): return np.max(x)
+        w1 = np.array([[1, -2, 3]])
+        b1 = np.zeros(1)
 
-        # implemented max3
-        for xv in self.floatvals:
-            for yv in self.floatvals:
-                for zv in self.floatvals:
-                    xyzv = np.array([xv, yv, zv])
-                    self.assertEqual(phi_max3.eval(xyzv), max3(xyzv))
+        w2 = np.array([[-5, 6, -7], [-8, 9, 10]])
+        b2 = np.array([11, -12])
 
-    def test_make_max4(self):
-        x = amnet.Variable(4, name='x')
-        phi_max4 = amnet.atoms.make_max4(x)
+        w3 = np.array([[7, 8, 9]])
+        b3 = np.array([-1])
 
-        # true max4
-        def max4(x): return np.max(x)
+        y1 = amnet.Linear(w1, x)
+        y2 = amnet.Affine(w2, x, b2)
+        y3 = amnet.Affine(w3, x, b3)
 
-        # implemented max4
-        for xv, yv, zv, wv in product(self.floatvals2, repeat=4):
-            xyzwv = np.array([xv, yv, zv, wv])
-            self.assertEqual(phi_max4.eval(xyzwv), max4(xyzwv))
+        y4 = x
 
-    def test_make_max(self):
-        x = amnet.Variable(4, name='x')
-        phi_max = amnet.atoms.make_max(x)
+        ystack = amnet.atoms.from_list([y1, y2, y3, y4])
+        self.assertEqual(ystack.outdim, 4+3)
+        self.assertEqual(ystack.indim, 3)
 
-        # true max4
-        def max_true(x): return np.max(x)
+        def ystack_true(xinp):
+            y1v = np.dot(w1, xinp) + b1
+            y2v = np.dot(w2, xinp) + b2
+            y3v = np.dot(w3, xinp) + b3
+            y4v = xinp
+            return np.concatenate((y1v, y2v, y3v, y4v), axis=0)
 
-        # implemented max4
-        for xv,yv,zv,wv in product(self.floatvals2, repeat=4):
-            xyzwv = np.array([xv, yv, zv, wv])
-            self.assertEqual(phi_max.eval(xyzwv), max_true(xyzwv))
+        for (xv0, xv1, xv2) in product(self.floatvals2, repeat=3):
+            xinp = np.array([xv0, xv1, xv2])
+            ysv = ystack.eval(xinp)
+            ytv = ystack_true(xinp)
+            self.assertAlmostEqual(norm(ysv - ytv), 0)
 
-    def test_make_max_affine(self):
-        x = amnet.Variable(5, name='x')
-
-        np.random.seed(1)
-        A = 10 * (2 * np.random.rand(4, 5) - 1)
-        b = 10 * (2 * np.random.rand(4) - 1)
-
-        phi_max_aff = amnet.atoms.make_max_aff(A, b, x)
-
-        # true max-affine
-        def maxaff(xv): return np.max(np.dot(A, xv) + b)
-
-        for _ in range(10):
-            xv = 10 * (2 * np.random.rand(5) - 1)
-            mv1 = phi_max_aff.eval(xv)
-            mv2 = maxaff(xv)
-            self.assertEqual(mv1, mv2)
-
-
-    def test_make_relu(self):
+    def test_relu(self):
         x = amnet.Variable(4, name='x')
         y = amnet.Variable(1, name='y')
-        phi_relu = amnet.atoms.make_relu(x)
-        phi_reluy = amnet.atoms.make_relu(y)
+        phi_relu = amnet.atoms.relu(x)
+        phi_reluy = amnet.atoms.relu(y)
 
         # true relu
         def relu(x): return np.maximum(x, 0)
 
-        for xv,yv,zv,wv in product(self.floatvals2, repeat=4):
+        for xv,yv,zv,wv in itertools.product(self.floatvals2, repeat=4):
             xyzwv = np.array([xv, yv, zv, wv])
             r = phi_relu.eval(xyzwv) # 4-d relu of x
             s = relu(xyzwv)
@@ -129,7 +142,72 @@ class TestAtoms(unittest.TestCase):
             s = relu(np.array([yv]))
             self.assertEqual(r, s)
 
-    def test_make_triplexer(self):
+    def test_max2_min2(self):
+        xy = amnet.Variable(6, name='xy')
+        x = amnet.Linear(
+            np.eye(3,6,0),
+            xy
+        )
+        y = amnet.Linear(
+            np.eye(3,6,3),
+            xy
+        )
+        max_xy = amnet.atoms.max2(x, y)
+        min_xy = amnet.atoms.min2(x, y)
+
+        def true_max2(xinp, yinp):
+            return np.maximum(xinp, yinp)
+
+        def true_min2(xinp, yinp):
+            return np.minimum(xinp, yinp)
+
+        for xyv in itertools.product(self.floatvals2, repeat=6):
+            xyinp = np.array(xyv)
+            xinp = xyinp[:3]
+            yinp = xyinp[3:]
+
+            max_xy_tv = true_max2(xinp, yinp)
+            max_xy_v  = max_xy.eval(xyinp)
+
+            min_xy_tv = true_min2(xinp, yinp)
+            min_xy_v = min_xy.eval(xyinp)
+
+            self.assertEqual(len(max_xy_tv), 3)
+            self.assertEqual(len(max_xy_v), 3)
+            self.assertAlmostEqual(norm(max_xy_v - max_xy_tv), 0)
+
+            self.assertEqual(len(min_xy_tv), 3)
+            self.assertEqual(len(min_xy_v), 3)
+            self.assertAlmostEqual(norm(min_xy_v - min_xy_tv), 0)
+
+    def test_max_all_max_aff(self):
+        x = amnet.Variable(4, name='x')
+
+        w = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]])
+        b = np.array([1.1, 1.2, 1.3])
+
+        y = amnet.Affine(
+            w,
+            x,
+            b
+        )
+        max_y = amnet.atoms.max_all(y)
+        maff = amnet.atoms.max_aff(w, b, x)
+
+        def true_max_aff(xinp):
+            return np.max(np.dot(w, xinp) + b)
+
+        for xv in itertools.product(self.floatvals2, repeat=4):
+            xinp = np.array(xv)
+
+            tv = true_max_aff(xinp)
+            max_y_v = max_y.eval(xinp)
+            maff_v  = maff.eval(xinp)
+
+            self.assertAlmostEqual(norm(tv - max_y_v), 0)
+            self.assertAlmostEqual(norm(tv - maff_v), 0)
+
+    def test_triplexer(self):
         x = amnet.Variable(1, name='xv')
 
         np.random.seed(1)
@@ -141,7 +219,7 @@ class TestAtoms(unittest.TestCase):
             d = 3 * (2 * np.random.rand(4) - 1)
             e = 3 * (2 * np.random.rand(4) - 1)
             f = 3 * (2 * np.random.rand(4) - 1)
-            phi_tri = amnet.atoms.make_triplexer(x, a, b, c, d, e, f)
+            phi_tri = amnet.atoms.triplexer(x, a, b, c, d, e, f)
 
             xvals = 100 * (2 * np.random.rand(1000) - 1)
             for xv in xvals:

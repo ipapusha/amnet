@@ -10,14 +10,14 @@ def make_vgc(alpha):
 
     # affine transformations
     zero1 = amnet.atoms.make_const(np.zeros(1), x)
-    ae    = amnet.AffineTransformation(np.array([[alpha, 0]]), x, np.zeros(1))
-    e     = amnet.AffineTransformation(np.array([[1, 0]]), x, np.zeros(1))
-    neg_e = amnet.AffineTransformation(np.array([[-1, 0]]), x, np.zeros(1))
-    edot  = amnet.AffineTransformation(np.array([[0, 1]]), x, np.zeros(1))
-    neg_edot = amnet.AffineTransformation(np.array([[0, -1]]), x, np.zeros(1))
+    ae    = amnet.Affine(np.array([[alpha, 0]]), x, np.zeros(1))
+    e     = amnet.Affine(np.array([[1, 0]]), x, np.zeros(1))
+    neg_e = amnet.Affine(np.array([[-1, 0]]), x, np.zeros(1))
+    edot  = amnet.Affine(np.array([[0, 1]]), x, np.zeros(1))
+    neg_edot = amnet.Affine(np.array([[0, -1]]), x, np.zeros(1))
 
-    return amnet.atoms.make_or(
-        amnet.atoms.make_or(
+    return amnet.atoms.gate_or(
+        amnet.atoms.gate_or(
             zero1,
             ae,
             neg_e,
