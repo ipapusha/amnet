@@ -1,7 +1,9 @@
-## AMNET: Affine Multiplexing Network Toolbox
+# AMNET: Affine Multiplexing Network Toolbox
+AMNET is a Python toolbox that assists in building certain kinds of neural
+networks, and verifying their behavior in-the-loop (under development).
 ![Maxvis](https://raw.githubusercontent.com/ipapusha/amnet/master/doc/fig/maxvis.png)
 
-### Example usage
+## Example usage
 ```python
 import numpy as np
 from amnet import Variable, Linear, Mu
@@ -26,5 +28,5 @@ print phimax
 print phimax.eval([1, -2]) # returns: 1
 ```
 
-### References
+## References
 * Forthcoming...
