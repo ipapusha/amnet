@@ -1,8 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import sys
-sys.path.append('..') # so that this file can be directly run
-sys.path.append('.')
+sys.path.append('..') # so that amnet can be imported
 import amnet
 from amnet import tf_utils
 from sklearn.decomposition import PCA
