@@ -20,7 +20,6 @@ def _node_for(ctx, name, dot, append_dims=True):
 
     # the checking order should go *up* the class hierarchy
     if isinstance(phi, amnet.Variable):
-        shape = 'box'
         fillcolor = 'gray80'
     elif isinstance(phi, amnet.Linear):
         pass
@@ -29,11 +28,10 @@ def _node_for(ctx, name, dot, append_dims=True):
     elif isinstance(phi, amnet.Affine):
         pass
     elif isinstance(phi, amnet.Mu):
-        shape = 'box'
         style = 'filled'
         fillcolor = 'gray80'
     elif isinstance(phi, amnet.Stack):
-        shape = 'box'
+        style = 'filled'
     elif isinstance(phi, amnet.Amn):
         pass
 

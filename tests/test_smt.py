@@ -230,8 +230,8 @@ class TestSmt(unittest.TestCase):
         )
 
         # visualize dag
-        #dot = amnet.vis.amn2gv(phi, ctx=None, title='dag')
-        #dot.render(filename='dag.gv', directory='vis')
+        dot = amnet.vis.amn2gv(phi, ctx=None, title='dag')
+        dot.render(filename='dag.gv', directory='vis')
 
 
 if __name__ == '__main__':
