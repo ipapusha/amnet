@@ -5,4 +5,4 @@ import amnet.util
 import amnet.lyap
 #import amnet.vis
 
-__version__ = "0.2.2"
+__version__ = "0.3.0"
