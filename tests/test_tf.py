@@ -1,39 +1,53 @@
 import tensorflow as tf
 import numpy as np
 import sys
-sys.path.append('..') # so that amnet can be imported
+sys.path.append('..') # so that amnet can run directly
 import amnet
 from amnet import tf_utils
-from sklearn.decomposition import PCA
 from tensorflow.examples.tutorials.mnist import input_data
 
-# hyperparameters
-learning_rate = 0.5
-epochs = 10
-batch_size = 100
-reduced_dim = 40
+def pca(A, dim):
+    # computing eigenvalues and eigenvectors of covariance matrix
+    M = (A-np.mean(A.T,axis=1)).T # subtract the mean (along columns)
+    [latent,coeff] = np.linalg.eig(np.cov(M))
+    coeff = coeff.astype(float) # discard complex part that results from numerical error
+
+    idx = np.argsort(latent) # sorting the eigenvalues
+    idx = idx[::-1] # in ascending order
+
+    # sorting eigenvectors according to the sorted eigenvalues
+    coeff = coeff[:,idx]
+    latent = latent[idx] # sorting eigenvalues
+
+    p = np.size(coeff,axis=1)
+    if dim < p and dim >= 0: # check if reduction makes sense
+        coeff = coeff[:,range(dim)] # cutting dimensionality
+    return coeff
 
 def main():
+
+    # hyperparameters
+    learning_rate = 0.5
+    epochs = 10
+    batch_size = 100
+    reduced_dim = 40
+
     # grab mnist data
     mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
     train_labels = mnist.train.labels
     train_pca_images = []
 
-    pca = PCA()
-    pca.fit(mnist.train.images)
-
-    rotation = pca.components_
-    rotation_small = rotation[:reduced_dim]
+    rotation_reduced = pca(mnist.train.images, reduced_dim)
 
     for image in mnist.train.images:
-        small_transformed_image = np.dot(rotation_small, image)
+        small_transformed_image = np.dot(rotation_reduced.T, image)
         train_pca_images.append(small_transformed_image)
 
     test_labels = mnist.test.labels
     test_pca_images = []
 
     for image in mnist.test.images:
-        small_transformed_image = np.dot(rotation_small, image)
+        small_transformed_image = np.dot(rotation_reduced.T, image)
         test_pca_images.append(small_transformed_image)
 
 
