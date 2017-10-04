@@ -233,8 +233,31 @@ class TestSmt(unittest.TestCase):
         #dot = amnet.vis.amn2gv(phi, ctx=None, title='dag')
         #dot.render(filename='dag.gv', directory='vis')
 
-    def test_relu(self):
-        pass
+    def test_SmtEncoder_relu_1(self):
+        x = amnet.Variable(1, name='x')
+        y = amnet.atoms.relu(x)
+
+        def true_relu(fpin):
+            return max(fpin[0], 0)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals, repeat=y.indim),
+            true_f=true_relu
+        )
+
+    def test_SmtEncoder_relu_2(self):
+        x = amnet.Variable(3, name='x')
+        y = amnet.atoms.relu(x)
+
+        def true_relu(fpin):
+            return np.maximum(fpin, 0)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals2, repeat=y.indim),
+            true_f=true_relu
+        )
 
 
 

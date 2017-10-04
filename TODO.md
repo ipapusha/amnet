@@ -1,5 +1,5 @@
 # SMT encoder
-- [ ] Test relu
+- [x] Test relu
 - [ ] Test Constant() (through relu as well)
 - [ ] Add code coverage
 - [ ] Add the vgc atom
