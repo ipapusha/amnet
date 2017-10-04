@@ -217,7 +217,7 @@ def relu(phi):
 
 
 def min2_1(x, y):
-    """ main 1-d max method on which all min routines rely """
+    """ main 1-d min method on which all min routines rely """
     assert x.outdim == 1 and y.outdim == 1
     return amnet.Mu(
         y,
@@ -227,7 +227,7 @@ def min2_1(x, y):
 
 
 def min2(x, y):
-    """ returns vector with ith component equal to max(x_i, y_i)"""
+    """ returns vector with ith component equal to min(x_i, y_i)"""
     assert x.outdim == y.outdim
     assert x.outdim >= 1
 
