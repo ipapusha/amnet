@@ -104,7 +104,7 @@ def main():
     # create ReLU AMN
     nn = tf_utils.relu_amn(weights, biass)
 
-    # check if the networks are the same
+    # check if the networks execute are the same
     for image in test_pca_images:
         amnet_prediction = nn.eval(test_pca_images[0])
         diff = abs(sum(amnet_prediction) - sum(tf_prediction))

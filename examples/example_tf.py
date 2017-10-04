@@ -109,7 +109,7 @@ def main():
     # create ReLU AMN
     nn = tf_utils.relu_amn(weights, biases)
 
-    # check if the networks executes properly
+    # check if the networks achieve the same classification rate 
     corrects = 0
     totals = 0
     for image, label in zip(test_pca_images, test_labels):
