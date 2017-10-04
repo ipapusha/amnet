@@ -22,6 +22,7 @@ class TestSmt(unittest.TestCase):
             (np.linspace(-5., 5., 3), np.linspace(-.5, .5, 2)),
             axis=0
         )
+        cls.floatvals3 = np.linspace(-5., 5., 3)
         cls.FPTOL = 1e-8
 
     def validate_outputs(self, phi, onvals, true_f=None):
@@ -165,6 +166,46 @@ class TestSmt(unittest.TestCase):
             phi=phi_min3,
             onvals=itertools.product(self.floatvals2, repeat=phi_min3.indim),
             true_f=true_min3
+        )
+
+    def test_SmtEncoder_add_all(self):
+        xyz = amnet.Variable(3, name='xyz')
+        phi_add = amnet.atoms.add_all(xyz)
+
+        self.assertEqual(phi_add.outdim, 1)
+        self.assertEqual(phi_add.indim, 3)
+
+        def true_add(fpin):
+            return sum(fpin)
+
+        self.validate_outputs(
+            phi=phi_add,
+            onvals=itertools.product(self.floatvals2, repeat=phi_add.indim),
+            true_f=true_add
+        )
+
+    def test_SmtEncoder_add_list(self):
+        xyz = amnet.Variable(2+2+2, name='xyz')
+        x = amnet.Linear(np.eye(2, 6, 0), xyz)
+        y = amnet.Linear(np.eye(2, 6, 2), xyz)
+        z = amnet.Linear(np.eye(2, 6, 4), xyz)
+        phi_add_list = amnet.atoms.add_list([x, y, z])
+
+        self.assertEqual(x.outdim, 2)
+        self.assertEqual(y.outdim, 2)
+        self.assertEqual(z.outdim, 2)
+        self.assertEqual(phi_add_list.outdim, 2)
+        self.assertEqual(phi_add_list.indim, 6)
+
+
+        def true_add(fpin):
+            x, y, z = fpin[0:2], fpin[2:4], fpin[4:6]
+            return x + y + z
+
+        self.validate_outputs(
+            phi=phi_add_list,
+            onvals=itertools.product(self.floatvals3, repeat=phi_add_list.indim),
+            true_f=true_add
         )
 
     def test_SmtEncoder_triplexer(self):
