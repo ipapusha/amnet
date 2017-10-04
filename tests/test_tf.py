@@ -66,8 +66,8 @@ def main():
     cross_entropy = -tf.reduce_mean(tf.reduce_sum(y * tf.log(y_clipped)
                                                   + (1 - y) * tf.log(1 - y_clipped), axis=1))
 
-    # add an optimiser
-    optimiser = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cross_entropy)
+    # add an optimizer
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cross_entropy)
 
     # finally setup the initialisation operator
     init_op = tf.global_variables_initializer()
@@ -90,7 +90,7 @@ def main():
                 # batch_x, batch_y = mnist.train.next_batch(batch_size=batch_size)
                 batch_x = train_pca_images[i*batch_size : (i+1)*batch_size]
                 batch_y = train_labels[i*batch_size : (i+1)*batch_size]
-                _, c = sess.run([optimiser, cross_entropy], feed_dict={x: batch_x, y: batch_y})
+                _, c = sess.run([optimizer, cross_entropy], feed_dict={x: batch_x, y: batch_y})
                 avg_cost += c / total_batch
             print("Epoch:", (epoch + 1), "cost =", "{:.3f}".format(avg_cost))
 
