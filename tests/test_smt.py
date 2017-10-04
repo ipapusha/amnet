@@ -422,6 +422,25 @@ class TestSmt(unittest.TestCase):
         self.validate_outputs(phi=phi_le, onvals=onvals, true_f=true_le)
         self.validate_outputs(phi=phi_lt, onvals=onvals, true_f=true_lt)
 
+    def test_SmtEncoder_identity(self):
+        x = amnet.Variable(2, name='x')
+        w = np.array([[1, 2], [3, 4]])
+        b = np.array([-1, -1])
+        y = amnet.Affine(w, x, b)
+        z = amnet.atoms.identity(y)
+
+        self.assertEqual(y.outdim, 2)
+        self.assertEqual(z.outdim, 2)
+        self.assertEqual(z.indim, 2)
+
+        def true_z(fpin):
+            return np.dot(w, fpin) + b
+
+        self.validate_outputs(
+            phi=z,
+            onvals=itertools.product(self.floatvals, repeat=z.indim),
+            true_f=true_z
+        )
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)
