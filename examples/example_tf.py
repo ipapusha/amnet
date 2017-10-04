@@ -7,9 +7,11 @@ from amnet import tf_utils
 from tensorflow.examples.tutorials.mnist import input_data
 
 def pca(A, dim):
-    # computing eigenvalues and eigenvectors of covariance matrix
+
     M = (A-np.mean(A.T,axis=1)).T # subtract the mean (along columns)
-    [latent,coeff] = np.linalg.eig(np.cov(M))
+
+    # computing eigenvalues and eigenvectors of covariance matrix
+    [latent,coeff] = np.linalg.eig(np.cov(M)) 
     coeff = coeff.astype(float) # discard complex part that results from numerical error
 
     idx = np.argsort(latent) # sorting the eigenvalues
