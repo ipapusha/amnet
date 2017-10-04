@@ -1,5 +1,5 @@
 import numpy as np
-import amn as amnet
+import amnet
 
 
 ################################################################################

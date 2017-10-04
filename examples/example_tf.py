@@ -1,10 +1,9 @@
 import tensorflow as tf
 import numpy as np
 import sys
-sys.path.append('../amnet')
-import amn as amnet
-import tf_utils
-import atoms
+sys.path.append('..') # so that amnet can be imported
+import amnet
+from amnet import tf_utils
 from sklearn.decomposition import PCA
 from tensorflow.examples.tutorials.mnist import input_data
 
@@ -41,7 +40,7 @@ def main():
     test_pca_images = []
 
     for image in mnist.test.images:
-        small_transformed_image = np.dot(rotation_small, image)
+        small_transformed_image = np.dot(rotation_reduced, image)
         test_pca_images.append(small_transformed_image)
 
 
@@ -108,7 +107,7 @@ def main():
         weights, biases = tf_utils.get_vars(tf.trainable_variables(), sess)
 
     # create ReLU AMN
-    nn = tf_utils.make_relu_amn(weights, biases)
+    nn = tf_utils.relu_amn(weights, biases)
 
     # check if the networks executes properly
     corrects = 0

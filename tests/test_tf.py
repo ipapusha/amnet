@@ -1,9 +1,9 @@
 import tensorflow as tf
 import numpy as np
 import sys
-sys.path.append('../amnet')
-import amn as amnet
-import atoms
+sys.path.append('..') # so that amnet can be imported
+import amnet
+from amnet import tf_utils
 from sklearn.decomposition import PCA
 from tensorflow.examples.tutorials.mnist import input_data
 
@@ -97,44 +97,16 @@ def main():
 
         tf_prediction = y_relu.eval(feed_dict={x: [test_pca_images[0]]}, session=sess)[0]
 
-        weights, biass = get_vars(tf.trainable_variables(), sess)
+        weights, biass = tf_utils.get_vars(tf.trainable_variables(), sess)
 
     # create ReLU AMN
-    nn = make_relu_amn(weights, biass)
+    nn = tf_utils.relu_amn(weights, biass)
 
     # check if the networks are the same
     amnet_prediction = nn.eval(test_pca_images[0])
     diff = abs(sum(amnet_prediction) - sum(tf_prediction))
     assert(diff < 0.0001)
 
-# used to extract weights from tf network
-def get_vars(var_set, sess):
-    weights = []
-    biass = []
-    for v in var_set:
-        if v.name[0] == 'w':
-            weights.append(sess.run(v))
-        elif v.name[0] == 'b':
-            biass.append(sess.run(v))
-
-    return weights, biass
-
-
-def make_relu_amn(weights, biass):
-    dimensions = [weight.shape[0] for weight in weights]
-    num_layers = len(dimensions)
-    
-    input_vars = amnet.Variable(dimensions[0])
-    
-    prev_layer_vars = input_vars
-    num_relu = 0
-    # compose each layer
-    for n in range(num_layers):
-        affine_edges = amnet.AffineTransformation(np.transpose(weights[n]), prev_layer_vars, biass[n])
-        prev_layer_vars = atoms.make_relu(affine_edges)
-        num_relu += affine_edges.outdim
-
-    return prev_layer_vars
 
 if __name__ == '__main__':
     main()

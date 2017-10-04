@@ -16,7 +16,7 @@ def get_vars(var_set, sess):
     return weights, biases
 
 
-def make_relu_amn(weights, biases):
+def relu_amn(weights, biases):
     # get topology of network
     dimensions = [weight.shape[0] for weight in weights]
     num_layers = len(dimensions)
@@ -27,8 +27,8 @@ def make_relu_amn(weights, biases):
 
     # compose each layer
     for n in range(num_layers):
-        affine_edges = amnet.AffineTransformation(np.transpose(weights[n]), prev_layer_vars, biases[n])
-        prev_layer_vars = atoms.make_relu(affine_edges)
+        affine_edges = amnet.Affine(np.transpose(weights[n]), prev_layer_vars, biases[n])
+        prev_layer_vars = atoms.relu(affine_edges)
 
     # return full construction
     return prev_layer_vars
