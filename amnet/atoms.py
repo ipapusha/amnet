@@ -362,3 +362,119 @@ def fp_triplexer(inp, a, b, c, d, e, f):
     w[3] = fp_mu(x[3], y[3], z[3])
 
     return w[3]
+
+
+################################################################################
+# Gates from Table 2
+################################################################################
+
+def gate_and(x, y, z1, z2):
+    assert _validdims_gate(x, y, z1, z2)
+    return amnet.Mu(
+        amnet.Mu(
+            x,
+            y,
+            z1,
+        ),
+        y,
+        z2
+    )
+
+
+def gate_or(x, y, z1, z2):
+    assert _validdims_gate(x, y, z1, z2)
+    return amnet.Mu(
+        x,
+        amnet.Mu(
+            x,
+            y,
+            z1
+        ),
+        z2
+    )
+
+
+def gate_not(x, y, z):
+    assert _validdims_mu(x, y, z)
+    return amnet.Mu(
+        y,
+        z,
+        x
+    )
+
+
+def gate_xor(x, y, z1, z2):
+    assert _validdims_gate(x, y, z1, z2)
+    return amnet.Mu(
+        amnet.Mu(
+            y,
+            x,
+            z1
+        ),
+        amnet.Mu(
+            x,
+            y,
+            z1
+        ),
+        z2
+    )
+
+
+################################################################################
+# Comparisons from Table 2
+################################################################################
+
+def cmp_le(x, y, z):
+    assert _validdims_mu(x, y, z)
+    return amnet.Mu(
+        x,
+        y,
+        z
+    )
+
+
+def cmp_ge(x, y, z):
+    assert _validdims_mu(x, y, z)
+    return amnet.Mu(
+        x,
+        y,
+        neg(z)
+    )
+
+
+def cmp_lt(x, y, z):
+    assert _validdims_mu(x, y, z)
+    return gate_not(
+        x,
+        y,
+        neg(z)
+    )
+
+
+def cmp_gt(x, y, z):
+    assert _validdims_mu(x, y, z)
+    return gate_not(
+        x,
+        y,
+        z
+    )
+
+
+def cmp_eq(x, y, z):
+    assert _validdims_mu(x, y, z)
+    return gate_and(
+        x,
+        y,
+        z,
+        neg(z)
+    )
+
+
+def cmp_neq(x, y, z):
+    assert _validdims_mu(x, y, z)
+    return gate_and(
+        y,
+        x,
+        z,
+        neg(z)
+    )
