@@ -1,9 +1,11 @@
 # SMT encoder
 - [x] Test relu
 - [ ] Test Constant() (through relu as well)
-- [ ] Add code coverage
+- [x] Add code coverage
+
+# Trees
 - [ ] Add the vgc atom
-- [ ] Simplify across linear and stack
+- [ ] Greedy simplification routines (across linear and stack)
 - [ ] Fix issues in the tracker
 
 # TF routines
