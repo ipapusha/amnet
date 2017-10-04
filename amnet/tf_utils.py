@@ -9,14 +9,33 @@ def get_vars(var_set, sess):
     biases = []
     for v in var_set:
         if v.name[0] == 'w':
-            weights.append(sess.run(v))
+            new_weight = sess.run(v)
+            weights.append(new_weight)
         elif v.name[0] == 'b':
-            biases.append(sess.run(v))
+            new_bias = sess.run(v)
+            biases.append(new_bias)
+
+    # ensure that the weights and biases match dimensionality
+    assert(len(weights) == len(biases))
+
+    for i in range(len(weights)):
+        if i > 0:
+            assert(weights[i].shape[0] == weights[i-1].shape[1])
+        assert(weights[i].shape[1] == biases[i].shape[0])
 
     return weights, biases
 
 
 def relu_amn(weights, biases):
+
+    # ensure that the construction makes sense
+    assert(len(weights) == len(biases))
+
+    for i in range(len(weights)):
+        if i > 0:
+            assert(weights[i].shape[0] == weights[i-1].shape[1])
+        assert(weights[i].shape[1] == biases[i].shape[0])
+
     # get topology of network
     dimensions = [weight.shape[0] for weight in weights]
     num_layers = len(dimensions)

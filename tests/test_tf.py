@@ -11,7 +11,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 learning_rate = 0.5
 epochs = 10
 batch_size = 100
-reduced_dim = 50
+reduced_dim = 40
 
 def main():
     # grab mnist data
@@ -57,6 +57,8 @@ def main():
     # calculate the hidden layer output - in this case, let's use a softmax activated
     # output layer
     y_ = tf.nn.softmax(tf.add(tf.matmul(hidden_out, w2), b2))
+
+    # need to save raw relu output to compare to amnet output
     y_relu = tf.nn.relu(tf.add(tf.matmul(hidden_out, w2), b2))
 
     # now let's define the cost function which we are going to train the model on
@@ -103,9 +105,11 @@ def main():
     nn = tf_utils.relu_amn(weights, biass)
 
     # check if the networks are the same
-    amnet_prediction = nn.eval(test_pca_images[0])
-    diff = abs(sum(amnet_prediction) - sum(tf_prediction))
-    assert(diff < 0.0001)
+    for image in test_pca_images:
+        amnet_prediction = nn.eval(test_pca_images[0])
+        diff = abs(sum(amnet_prediction) - sum(tf_prediction))
+        assert(diff < 0.0001)
+    print("Tests passed")
 
 
 if __name__ == '__main__':
