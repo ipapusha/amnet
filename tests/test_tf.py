@@ -69,7 +69,7 @@ def main():
     # add an optimizer
     optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cross_entropy)
 
-    # finally setup the initialisation operator
+    # finally setup the initialization operator
     init_op = tf.global_variables_initializer()
 
     # define an accuracy assessment operation
@@ -81,7 +81,7 @@ def main():
 
     # start the session
     with tf.Session() as sess:
-        # initialise the variables
+        # initialize the variables
         sess.run(init_op)
         total_batch = int(len(mnist.train.labels) / batch_size)
         for epoch in range(epochs):
