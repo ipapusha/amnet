@@ -1,9 +1,10 @@
 # SMT encoder
-- [ ] test relu
-- [ ] test constant (through relu as well)
-- [ ] add vgc atom
-- [ ] simplify across linear and stack
-- [ ] fix issues
+- [ ] Test relu
+- [ ] Test Constant() (through relu as well)
+- [ ] Add code coverage
+- [ ] Add the vgc atom
+- [ ] Simplify across linear and stack
+- [ ] Fix issues in the tracker
 
 # TF routines
 ??
