@@ -202,8 +202,11 @@ def max_all(phi):
     return max_list(to_list(phi))
 
 
-def relu(phi):
-    """ returns vector with ith component equal to max(phi_i, 0) """
+def relu_old(phi):
+    """
+    returns vector with ith component equal to max(phi_i, 0)
+    OLD: inefficient, use relu instead
+    """
     assert phi.outdim >= 1
 
     zero = amnet.Constant(phi, np.zeros(phi.outdim))
@@ -216,11 +219,11 @@ def relu(phi):
     )
 
 
-def relu_special(phi):
+def relu(phi):
     """
     returns vector with ith component equal to max(phi_i, 0)
     this is a specialized low-level implementation that uses
-    fewer nodes than relu(..) above
+    fewer nodes than relu_old(..)
     """
     assert phi.outdim >= 1
 

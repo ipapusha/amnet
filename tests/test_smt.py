@@ -10,7 +10,7 @@ import sys
 import unittest
 import itertools
 
-VISUALIZE = False
+VISUALIZE = True
 
 class TestSmt(unittest.TestCase):
     @classmethod
@@ -304,9 +304,9 @@ class TestSmt(unittest.TestCase):
         # visualize relu
         if VISUALIZE: amnet.vis.quick_vis(y, title='relu_2')
 
-    def test_SmtEncoder_relu_special(self):
+    def test_SmtEncoder_relu_old(self):
         x = amnet.Variable(3, name='x')
-        y = amnet.atoms.relu_special(x)
+        y = amnet.atoms.relu_old(x)
 
         def true_relu(fpin):
             return np.maximum(fpin, 0)
@@ -317,8 +317,8 @@ class TestSmt(unittest.TestCase):
             true_f=true_relu
         )
 
-        # visualize relu_special
-        if VISUALIZE: amnet.vis.quick_vis(y, title='relu_special')
+        # visualize relu_old
+        if VISUALIZE: amnet.vis.quick_vis(y, title='relu_old')
 
     def test_SmtEncoder_gates(self):
         xy_z1z2 = amnet.Variable(2+2+1+1, name='xyz1z2')
