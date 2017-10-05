@@ -115,6 +115,50 @@ def neg(phi):
     )
 
 
+# begin TODO
+def sat(phi, lo=-1, hi=1):
+    """saturation: returns vector with ith component equal to sat(phi_i)"""
+    assert phi.outdim >= 1
+    pass
+
+
+def dz(phi):
+    """deadzone: returns vector with ith component equal to sat(dz_i)"""
+    assert phi.outdim >= 1
+    pass
+
+
+def aval(phi):
+    """absolute value: returns vector with ith component equal to |phi_i|"""
+    assert phi.outdim >= 1
+
+    def aval_1(x):
+        assert x.outdim == 1
+        return amnet.Mu(
+            neg(x),
+            x,
+            x
+        )
+
+    return thread_over(
+        aval_1,
+        phi
+    )
+
+
+def norm_1(phi):
+    """1-norm: returns |phi_1| + ... + |phi_n|"""
+    assert phi.outdim >= 1
+    pass
+
+
+def norm_inf(phi):
+    """inf-norm: return max_i(|phi_i|) """
+    return max_all(aval(phi))
+
+# end TODO
+
+
 ################################################################################
 # binary operations (Table 1)
 ################################################################################

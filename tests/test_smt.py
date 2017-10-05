@@ -462,6 +462,47 @@ class TestSmt(unittest.TestCase):
             true_f=true_z
         )
 
+    def test_SmtEncoder_aval1(self):
+        x = amnet.Variable(1, name='x')
+        y = amnet.atoms.aval(x)
+
+        self.assertEqual(y.outdim, 1)
+        self.assertEqual(y.indim, 1)
+
+        def true_aval(fpin):
+            return abs(fpin)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals, repeat=y.indim),
+            true_f = true_aval
+        )
+
+        # visualize aval1
+        if VISUALIZE: amnet.vis.quick_vis(y, title='aval1')
+
+    def test_SmtEncoder_aval3(self):
+        x = amnet.Variable(3, name='x')
+        y = amnet.atoms.aval(x)
+
+        self.assertEqual(y.outdim, 3)
+        self.assertEqual(y.indim, 3)
+
+        def true_aval(fpin):
+            x1, x2, x3 = fpin
+            return np.array([abs(x1), abs(x2), abs(x3)])
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals2, repeat=y.indim),
+            true_f=true_aval
+        )
+
+        # visualize aval3
+        if VISUALIZE: amnet.vis.quick_vis(y, title='aval3')
+
+
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
