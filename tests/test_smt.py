@@ -116,6 +116,8 @@ class TestSmt(unittest.TestCase):
             true_f=true_mu
         )
 
+        if VISUALIZE: amnet.vis.quick_vis(phi=w, title='mu')
+
     def test_SmtEncoder_max_all_2(self):
         xy = amnet.Variable(2, name='xy')
         phi_max2 = amnet.atoms.max_all(xy)
