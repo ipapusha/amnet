@@ -207,6 +207,33 @@ class TestAtoms(unittest.TestCase):
             self.assertAlmostEqual(norm(tv - max_y_v), 0)
             self.assertAlmostEqual(norm(tv - maff_v), 0)
 
+    def test_min_all_min_aff(self):
+        x = amnet.Variable(4, name='x')
+
+        w = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]])
+        b = np.array([1.1, 1.2, 1.3])
+
+        y = amnet.Affine(
+            w,
+            x,
+            b
+        )
+        min_y = amnet.atoms.min_all(y)
+        maff = amnet.atoms.min_aff(w, b, x)
+
+        def true_min_aff(xinp):
+            return np.min(np.dot(w, xinp) + b)
+
+        for xv in itertools.product(self.floatvals2, repeat=4):
+            xinp = np.array(xv)
+
+            tv = true_min_aff(xinp)
+            min_y_v = min_y.eval(xinp)
+            maff_v  = maff.eval(xinp)
+
+            self.assertAlmostEqual(norm(tv - min_y_v), 0)
+            self.assertAlmostEqual(norm(tv - maff_v), 0)
+
     def test_triplexer(self):
         x = amnet.Variable(1, name='xv')
 

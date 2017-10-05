@@ -311,6 +311,32 @@ def max_aff(A, b, phi):
     return max_list(outlist)
 
 
+def min_aff(A, b, phi):
+    """ returns an AMN that evaluates to
+        min_i(sum_j a_{ij} phi_j + b_i) """
+    (m, n) = A.shape
+    assert len(b) == m
+    assert phi.outdim == n
+    assert m >= 1 and n >= 1
+
+    outlist = []
+    for i in range(m):
+        if b[i] == 0:
+            outlist.append(amnet.Linear(
+                A[i, :].reshape((1, n)),
+                phi
+            ))
+        else:
+            outlist.append(amnet.Affine(
+                A[i, :].reshape((1, n)),
+                phi,
+                b[i].reshape((1,))
+            ))
+    assert len(outlist) == m
+    return min_list(outlist)
+
+
+
 def triplexer(phi, a, b, c, d, e, f):
     assert phi.outdim == 1
     assert all([len(p) == 4 for p in [a, b, c, d, e, f]])
