@@ -254,14 +254,31 @@ def max_aff(A, b, phi):
     (m, n) = A.shape
     assert len(b) == m
     assert phi.outdim == n
+    assert m >= 1 and n >= 1
 
-    phi_aff = amnet.Affine(
-        A,
-        phi,
-        b
-    )
+    # OLD: inefficient
+    #phi_aff = amnet.Affine(
+    #    A,
+    #    phi,
+    #    b
+    #)
+    #return max_all(phi_aff)
 
-    return max_all(phi_aff)
+    outlist = []
+    for i in range(m):
+        if b[i] == 0:
+            outlist.append(amnet.Linear(
+                A[i, :].reshape((1, n)),
+                phi
+            ))
+        else:
+            outlist.append(amnet.Affine(
+                A[i, :].reshape((1, n)),
+                phi,
+                b[i].reshape((1,))
+            ))
+    assert len(outlist) == m
+    return max_list(outlist)
 
 
 def triplexer(phi, a, b, c, d, e, f):
