@@ -97,3 +97,11 @@ def amn2gv(phi, ctx=None, title=None):
 
     # return the dot object
     return dot
+
+
+def quick_vis(phi, title='amn', directory='vis', ctx=None):
+    dot = amn2gv(phi,
+                 ctx=ctx,
+                 title=title)
+    dot.render(filename=('%s.gv' % title),
+               directory=directory)

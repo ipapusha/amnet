@@ -216,6 +216,33 @@ def relu(phi):
     )
 
 
+def relu_special(phi):
+    """
+    returns vector with ith component equal to max(phi_i, 0)
+    this is a specialized low-level implementation that uses
+    fewer nodes than relu(..) above
+    """
+    assert phi.outdim >= 1
+
+    # one-dimensional zero
+    zero1 = amnet.Constant(phi, np.zeros(1))
+    assert zero1.outdim == 1
+
+    # use the idea that max(x, 0) == mu(0, x, x)
+    # go component-by-component
+    outlist = []
+    for i in range(phi.outdim):
+        xi = select(phi, i)
+        outlist.append(amnet.Mu(
+            zero1,
+            xi,
+            xi
+        ))
+    assert len(outlist) == phi.outdim
+
+    return from_list(outlist)
+
+
 def min2_1(x, y):
     """ main 1-d min method on which all min routines rely """
     assert x.outdim == 1 and y.outdim == 1

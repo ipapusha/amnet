@@ -10,6 +10,8 @@ import sys
 import unittest
 import itertools
 
+VISUALIZE = False
+
 class TestSmt(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -271,8 +273,7 @@ class TestSmt(unittest.TestCase):
         )
 
         # visualize dag
-        #dot = amnet.vis.amn2gv(phi, ctx=None, title='dag')
-        #dot.render(filename='dag.gv', directory='vis')
+        if VISUALIZE: amnet.vis.quick_vis(phi, title='dag')
 
     def test_SmtEncoder_relu_1(self):
         x = amnet.Variable(1, name='x')
@@ -299,6 +300,25 @@ class TestSmt(unittest.TestCase):
             onvals=itertools.product(self.floatvals2, repeat=y.indim),
             true_f=true_relu
         )
+
+        # visualize relu
+        if VISUALIZE: amnet.vis.quick_vis(y, title='relu_2')
+
+    def test_SmtEncoder_relu_special(self):
+        x = amnet.Variable(3, name='x')
+        y = amnet.atoms.relu_special(x)
+
+        def true_relu(fpin):
+            return np.maximum(fpin, 0)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals2, repeat=y.indim),
+            true_f=true_relu
+        )
+
+        # visualize relu_special
+        if VISUALIZE: amnet.vis.quick_vis(y, title='relu_special')
 
     def test_SmtEncoder_gates(self):
         xy_z1z2 = amnet.Variable(2+2+1+1, name='xyz1z2')
