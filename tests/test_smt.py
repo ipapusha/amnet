@@ -556,7 +556,7 @@ class TestSmt(unittest.TestCase):
         # visualize sat1
         if VISUALIZE: amnet.vis.quick_vis(y1, title='sat1')
 
-    def test_SmtEncoder_sat3(self):
+    def donot_test_SmtEncoder_sat3(self):
         x = amnet.Variable(3, name='x')
         y1 = amnet.atoms.sat(x)
         y2 = amnet.atoms.sat(x, lo=-3, hi=3)
@@ -573,6 +573,9 @@ class TestSmt(unittest.TestCase):
         self.assertAlmostEqual(norm(y1.eval(np.array([-2, 1.6, 0.5])) - np.array([-1, 1, 0.5])), 0)
         self.assertAlmostEqual(norm(y2.eval(np.array([-2, 1.6, 0.5])) - np.array([-2, 1.6, 0.5])), 0)
         self.assertAlmostEqual(norm(y3.eval(np.array([-2, 1.6, 0.5])) - np.array([-2, 1.5, 0.5])), 0)
+
+        # visualize sat3
+        if VISUALIZE: amnet.vis.quick_vis(y1, title='sat3')
 
         # automatic tests
         def true_sat3(fpin, lo, hi):
@@ -596,9 +599,6 @@ class TestSmt(unittest.TestCase):
             onvals=itertools.product(self.floatvals2, repeat=y3.indim),
             true_f=lambda z: true_sat3(z, -2, 1.5)
         )
-
-        # visualize sat3
-        if VISUALIZE: amnet.vis.quick_vis(y1, title='sat3')
 
 
 if __name__ == '__main__':
