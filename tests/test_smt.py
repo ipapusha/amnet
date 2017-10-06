@@ -789,6 +789,57 @@ class TestSmt(unittest.TestCase):
             true_f=true_norm1
         )
 
+    def test_SmtEncoder_phase_vgc(self):
+        alpha1 = 1.5
+        alpha2 = -0.7
+        x = amnet.Variable(2, name='x')
+        e = amnet.atoms.select(x, 0)
+        edot = amnet.atoms.select(x, 1)
+        phi_vgc1 = amnet.atoms.phase_vgc(e, edot, alpha=alpha1)
+        phi_vgc2 = amnet.atoms.phase_vgc(e, edot, alpha=alpha2)
+
+        self.assertEqual(phi_vgc1.indim, 2)
+        self.assertEqual(phi_vgc1.outdim, 1)
+        self.assertEqual(phi_vgc2.indim, 2)
+        self.assertEqual(phi_vgc2.outdim, 1)
+
+        # visualize vgc
+        if VISUALIZE:
+            ctx = amnet.smt.NamingContext(phi_vgc1)
+            ctx.rename(e, 'e')
+            ctx.rename(edot, 'edot')
+            ctx.rename(phi_vgc1, 'phi_vgc1')
+            amnet.vis.quick_vis(phi_vgc1, title='phase_vgc', ctx=ctx)
+
+        # manual tests
+        self.assertAlmostEqual(norm(phi_vgc1.eval(np.array([1.1, 1.2])) - np.array([alpha1 * 1.1])), 0)
+        self.assertAlmostEqual(norm(phi_vgc1.eval(np.array([1.1, -1.2])) - np.array([0])), 0)
+        self.assertAlmostEqual(norm(phi_vgc1.eval(np.array([-1.1, -1.2])) - np.array([alpha1 * (-1.1)])), 0)
+        self.assertAlmostEqual(norm(phi_vgc1.eval(np.array([-1.1, 1.2])) - np.array([0])), 0)
+
+        self.assertAlmostEqual(norm(phi_vgc1.eval(np.array([1.1, 0])) - np.array([0])), 0)
+        self.assertAlmostEqual(norm(phi_vgc1.eval(np.array([0, 1.2])) - np.array([0])), 0)
+        self.assertAlmostEqual(norm(phi_vgc1.eval(np.array([-1.1, 0])) - np.array([0])), 0)
+        self.assertAlmostEqual(norm(phi_vgc1.eval(np.array([0, -1.2])) - np.array([0])), 0)
+        self.assertAlmostEqual(norm(phi_vgc1.eval(np.array([0, 0])) - np.array([0])), 0)
+
+        # automatic tests
+        def true_phase_vgc(fpin, alpha):
+            x1, x2 = fpin
+            return alpha*x1 if x1*x2 > 0 else 0
+
+        self.validate_outputs(
+            phi=phi_vgc1,
+            onvals=itertools.product(self.floatvals2, repeat=phi_vgc1.indim),
+            true_f=lambda xi: true_phase_vgc(xi, alpha=alpha1)
+        )
+
+        self.validate_outputs(
+            phi=phi_vgc2,
+            onvals=itertools.product(self.floatvals2, repeat=phi_vgc2.indim),
+            true_f=lambda xi: true_phase_vgc(xi, alpha=alpha2)
+        )
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
