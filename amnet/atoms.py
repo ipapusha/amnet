@@ -603,7 +603,7 @@ def phase_vgc(e, edot, alpha=1.0):
     )
 
 
-def max_aff(A, b, phi):
+def max_aff(A, phi, b):
     """ returns an AMN that evaluates to
         max_i(sum_j a_{ij} phi_j + b_i) """
     (m, n) = A.shape
@@ -636,7 +636,7 @@ def max_aff(A, b, phi):
     return max_list(outlist)
 
 
-def min_aff(A, b, phi):
+def min_aff(A, phi, b):
     """ returns an AMN that evaluates to
         min_i(sum_j a_{ij} phi_j + b_i) """
     (m, n) = A.shape

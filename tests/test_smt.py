@@ -258,6 +258,64 @@ class TestSmt(unittest.TestCase):
             )
             #print "done!"
 
+    def test_SmtEncoder_max_aff(self):
+        np.random.seed(1)
+
+        m = 10
+        n = 4
+        A = np.random.randint(-5, 6, m*n).reshape((m, n))
+        b = np.random.randint(-5, 6, m).reshape((m,))
+        b[np.random.randint(0, n)] = 0 # make sure there is a Linear term
+
+        x = amnet.Variable(n, name='x')
+        y = amnet.atoms.max_aff(A, x, b)
+
+        self.assertEqual(y.indim, n)
+        self.assertEqual(y.outdim, 1)
+
+        def true_max_aff(fpin):
+            vals = np.dot(A, fpin) + b
+            assert len(vals) == m
+            return np.max(vals)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals3, repeat=y.indim),
+            true_f=true_max_aff
+        )
+
+        # visualize max_aff
+        if VISUALIZE: amnet.vis.quick_vis(y, title='max_aff')
+
+    def test_SmtEncoder_min_aff(self):
+        np.random.seed(1)
+
+        m = 10
+        n = 4
+        A = np.random.randint(-5, 6, m*n).reshape((m, n))
+        b = np.random.randint(-5, 6, m).reshape((m,))
+        b[np.random.randint(0, n)] = 0 # make sure there is a Linear term
+
+        x = amnet.Variable(n, name='x')
+        y = amnet.atoms.min_aff(A, x, b)
+
+        self.assertEqual(y.indim, n)
+        self.assertEqual(y.outdim, 1)
+
+        def true_min_aff(fpin):
+            vals = np.dot(A, fpin) + b
+            assert len(vals) == m
+            return np.min(vals)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals3, repeat=y.indim),
+            true_f=true_min_aff
+        )
+
+        # visualize min_aff
+        if VISUALIZE: amnet.vis.quick_vis(y, title='min_aff')
+
     def test_SmtEncoder_dag(self):
         xyz = amnet.Variable(3, name='xyz')
         x = amnet.atoms.select(xyz, 0)

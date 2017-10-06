@@ -192,7 +192,7 @@ class TestAtoms(unittest.TestCase):
             b
         )
         max_y = amnet.atoms.max_all(y)
-        maff = amnet.atoms.max_aff(w, b, x)
+        maff = amnet.atoms.max_aff(w, x, b)
 
         def true_max_aff(xinp):
             return np.max(np.dot(w, xinp) + b)
@@ -219,7 +219,7 @@ class TestAtoms(unittest.TestCase):
             b
         )
         min_y = amnet.atoms.min_all(y)
-        maff = amnet.atoms.min_aff(w, b, x)
+        maff = amnet.atoms.min_aff(w, x, b)
 
         def true_min_aff(xinp):
             return np.min(np.dot(w, xinp) + b)
