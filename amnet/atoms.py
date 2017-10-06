@@ -393,6 +393,21 @@ def relu(phi):
     return from_list(outlist)
 
 
+def pos_part(phi):
+    """
+    synonym for relu, i.e.,
+    pos_part(phi)_i = max(phi_i, 0)
+    """
+    return relu(phi)
+
+
+def neg_part(phi):
+    """
+    neg_part(phi)_i = max(-phi_i, 0)
+    """
+    return relu(neg(phi))
+
+
 def min2_1(x, y):
     """ main 1-d min method on which all min routines rely """
     assert x.outdim == 1 and y.outdim == 1
