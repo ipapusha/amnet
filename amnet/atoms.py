@@ -249,9 +249,68 @@ def norminf(phi):
         for k in range(phi.outdim)]
     )
 
+def relu_old(phi):
+    """
+    returns vector with ith component equal to max(phi_i, 0)
+    OLD: inefficient, use relu instead
+    """
+    assert phi.outdim >= 1
+
+    zeron = zero_from(phi, dim=phi.outdim)
+    assert zeron.outdim == phi.outdim
+
+    return thread_over(
+        _max2_1,
+        phi,
+        zeron
+    )
+
+
+def relu(phi):
+    """
+    returns vector with ith component equal to max(phi_i, 0)
+    this is a specialized low-level implementation that uses
+    fewer nodes than relu_old(..)
+    """
+    assert phi.outdim >= 1
+
+    # one-dimensional zero
+    zero1 = zero_from(phi, dim=1)
+    assert zero1.outdim == 1
+
+    # use the idea that max(x, 0) == mu(0, x, x)
+    # go component-by-component
+    outlist = []
+    for i in range(phi.outdim):
+        xi = select(phi, i)
+        outlist.append(amnet.Mu(
+            zero1,
+            xi,
+            xi
+        ))
+    assert len(outlist) == phi.outdim
+
+    return from_list(outlist)
+
+
+def pos_part(phi):
+    """
+    synonym for relu, i.e.,
+    pos_part(phi)_i = max(phi_i, 0)
+    """
+    return relu(phi)
+
+
+def neg_part(phi):
+    """
+    neg_part(phi)_i = max(-phi_i, 0)
+    """
+    return relu(negate(phi))
+
 
 ################################################################################
-# binary operations (Table 1)
+# binary operations (Table 1),
+# and their n-ary folds
 ################################################################################
 
 def add2(x, y):
@@ -321,7 +380,7 @@ def sub2(x, y):
     )
 
 
-def max2_1(x, y):
+def _max2_1(x, y):
     """ main 1-d max method on which all max routines rely """
     assert x.outdim == 1 and y.outdim == 1
     return amnet.Mu(
@@ -337,7 +396,7 @@ def max2(x, y):
     assert x.outdim >= 1
 
     return thread_over(
-        max2_1,
+        _max2_1,
         x,
         y
     )
@@ -367,66 +426,7 @@ def max_all(phi):
     return max_list(to_list(phi))
 
 
-def relu_old(phi):
-    """
-    returns vector with ith component equal to max(phi_i, 0)
-    OLD: inefficient, use relu instead
-    """
-    assert phi.outdim >= 1
-
-    zeron = zero_from(phi, dim=phi.outdim)
-    assert zeron.outdim == phi.outdim
-
-    return thread_over(
-        max2_1,
-        phi,
-        zeron
-    )
-
-
-def relu(phi):
-    """
-    returns vector with ith component equal to max(phi_i, 0)
-    this is a specialized low-level implementation that uses
-    fewer nodes than relu_old(..)
-    """
-    assert phi.outdim >= 1
-
-    # one-dimensional zero
-    zero1 = zero_from(phi, dim=1)
-    assert zero1.outdim == 1
-
-    # use the idea that max(x, 0) == mu(0, x, x)
-    # go component-by-component
-    outlist = []
-    for i in range(phi.outdim):
-        xi = select(phi, i)
-        outlist.append(amnet.Mu(
-            zero1,
-            xi,
-            xi
-        ))
-    assert len(outlist) == phi.outdim
-
-    return from_list(outlist)
-
-
-def pos_part(phi):
-    """
-    synonym for relu, i.e.,
-    pos_part(phi)_i = max(phi_i, 0)
-    """
-    return relu(phi)
-
-
-def neg_part(phi):
-    """
-    neg_part(phi)_i = max(-phi_i, 0)
-    """
-    return relu(negate(phi))
-
-
-def min2_1(x, y):
+def _min2_1(x, y):
     """ main 1-d min method on which all min routines rely """
     assert x.outdim == 1 and y.outdim == 1
     return amnet.Mu(
@@ -442,7 +442,7 @@ def min2(x, y):
     assert x.outdim >= 1
 
     return thread_over(
-        min2_1,
+        _min2_1,
         x,
         y
     )
@@ -456,164 +456,6 @@ def min_list(phi_list):
 def min_all(phi):
     assert phi.outdim >= 1
     return min_list(to_list(phi))
-
-
-def max_aff(A, b, phi):
-    """ returns an AMN that evaluates to 
-        max_i(sum_j a_{ij} phi_j + b_i) """
-    (m, n) = A.shape
-    assert len(b) == m
-    assert phi.outdim == n
-    assert m >= 1 and n >= 1
-
-    # OLD: inefficient
-    #phi_aff = amnet.Affine(
-    #    A,
-    #    phi,
-    #    b
-    #)
-    #return max_all(phi_aff)
-
-    outlist = []
-    for i in range(m):
-        if b[i] == 0:
-            outlist.append(amnet.Linear(
-                A[i, :].reshape((1, n)),
-                phi
-            ))
-        else:
-            outlist.append(amnet.Affine(
-                A[i, :].reshape((1, n)),
-                phi,
-                b[i].reshape((1,))
-            ))
-    assert len(outlist) == m
-    return max_list(outlist)
-
-
-def min_aff(A, b, phi):
-    """ returns an AMN that evaluates to
-        min_i(sum_j a_{ij} phi_j + b_i) """
-    (m, n) = A.shape
-    assert len(b) == m
-    assert phi.outdim == n
-    assert m >= 1 and n >= 1
-
-    outlist = []
-    for i in range(m):
-        if b[i] == 0:
-            outlist.append(amnet.Linear(
-                A[i, :].reshape((1, n)),
-                phi
-            ))
-        else:
-            outlist.append(amnet.Affine(
-                A[i, :].reshape((1, n)),
-                phi,
-                b[i].reshape((1,))
-            ))
-    assert len(outlist) == m
-    return min_list(outlist)
-
-
-def triplexer(phi, a, b, c, d, e, f):
-    assert phi.outdim == 1
-    assert all([len(p) == 4 for p in [a, b, c, d, e, f]])
-
-    x = [None] * 4
-    y = [None] * 4
-    z = [None] * 4
-    w = [None] * 4
-
-    # Layer 1 weights
-    for i in range(3):
-        x[i] = amnet.Affine(
-            np.array(a[i]).reshape((1, 1)),
-            phi,
-            np.array(b[i]).reshape((1,))
-        )
-        y[i] = amnet.Affine(
-            np.array(c[i]).reshape((1, 1)),
-            phi,
-            np.array(d[i]).reshape((1,))
-        )
-        z[i] = amnet.Affine(
-            np.array(e[i]).reshape((1, 1)),
-            phi,
-            np.array(f[i]).reshape((1,))
-        )
-
-    # Layer 1 nonlinearity
-    for i in range(3):
-        w[i] = amnet.Mu(
-            x[i],
-            y[i],
-            z[i]
-        )
-
-    # Layer 2 weights
-    x[3] = amnet.Affine(
-        np.array(a[3]).reshape((1, 1)),
-        w[1],
-        np.array(b[3]).reshape((1,))
-    )
-    y[3] = amnet.Affine(
-        np.array(c[3]).reshape((1, 1)),
-        w[2],
-        np.array(d[3]).reshape((1,))
-    )
-    z[3] = amnet.Affine(
-        np.array(e[3]).reshape((1, 1)),
-        w[0],
-        np.array(f[3]).reshape((1,))
-    )
-
-    # Layer 2 nonlinearity
-    w[3] = amnet.Mu(
-        x[3],
-        y[3],
-        z[3]
-    )
-
-    return w[3]
-
-
-
-################################################################################
-# Floating-point functions (for testing)
-################################################################################
-
-def fp_mu(x, y, z):
-    return x if z <= 0 else y
-
-
-def fp_triplexer(inp, a, b, c, d, e, f):
-    assert all([len(p) == 4 for p in [a, b, c, d, e, f]])
-
-    x = [0] * 4
-    y = [0] * 4
-    z = [0] * 4
-    w = [0] * 4
-
-    # Layer 1 weights
-    for i in range(3):
-        x[i] = a[i] * inp + b[i]
-        y[i] = c[i] * inp + d[i]
-        z[i] = e[i] * inp + f[i]
-
-    # Layer 1 nonlinearity
-    for i in range(3):
-        w[i] = fp_mu(x[i], y[i], z[i])
-
-    # Layer 2 weights
-    x[3] = a[3] * w[1] + b[3]
-    y[3] = c[3] * w[2] + d[3]
-    z[3] = e[3] * w[0] + f[3]
-
-    # Layer 2 nonlinearity
-    w[3] = fp_mu(x[3], y[3], z[3])
-
-    return w[3]
 
 
 ################################################################################
@@ -733,7 +575,7 @@ def cmp_neq(x, y, z):
 
 
 ################################################################################
-# Control oriented atoms
+# Control-oriented and other specialized atoms
 ################################################################################
 
 def phase_vgc(e, edot, alpha=1.0):
@@ -759,3 +601,160 @@ def phase_vgc(e, edot, alpha=1.0):
         e,
         edot
     )
+
+
+def max_aff(A, b, phi):
+    """ returns an AMN that evaluates to
+        max_i(sum_j a_{ij} phi_j + b_i) """
+    (m, n) = A.shape
+    assert len(b) == m
+    assert phi.outdim == n
+    assert m >= 1 and n >= 1
+
+    # OLD: inefficient
+    #phi_aff = amnet.Affine(
+    #    A,
+    #    phi,
+    #    b
+    #)
+    #return max_all(phi_aff)
+
+    outlist = []
+    for i in range(m):
+        if b[i] == 0:
+            outlist.append(amnet.Linear(
+                A[i, :].reshape((1, n)),
+                phi
+            ))
+        else:
+            outlist.append(amnet.Affine(
+                A[i, :].reshape((1, n)),
+                phi,
+                b[i].reshape((1,))
+            ))
+    assert len(outlist) == m
+    return max_list(outlist)
+
+
+def min_aff(A, b, phi):
+    """ returns an AMN that evaluates to
+        min_i(sum_j a_{ij} phi_j + b_i) """
+    (m, n) = A.shape
+    assert len(b) == m
+    assert phi.outdim == n
+    assert m >= 1 and n >= 1
+
+    outlist = []
+    for i in range(m):
+        if b[i] == 0:
+            outlist.append(amnet.Linear(
+                A[i, :].reshape((1, n)),
+                phi
+            ))
+        else:
+            outlist.append(amnet.Affine(
+                A[i, :].reshape((1, n)),
+                phi,
+                b[i].reshape((1,))
+            ))
+    assert len(outlist) == m
+    return min_list(outlist)
+
+
+def triplexer(phi, a, b, c, d, e, f):
+    assert phi.outdim == 1
+    assert all([len(p) == 4 for p in [a, b, c, d, e, f]])
+
+    x = [None] * 4
+    y = [None] * 4
+    z = [None] * 4
+    w = [None] * 4
+
+    # Layer 1 weights
+    for i in range(3):
+        x[i] = amnet.Affine(
+            np.array(a[i]).reshape((1, 1)),
+            phi,
+            np.array(b[i]).reshape((1,))
+        )
+        y[i] = amnet.Affine(
+            np.array(c[i]).reshape((1, 1)),
+            phi,
+            np.array(d[i]).reshape((1,))
+        )
+        z[i] = amnet.Affine(
+            np.array(e[i]).reshape((1, 1)),
+            phi,
+            np.array(f[i]).reshape((1,))
+        )
+
+    # Layer 1 nonlinearity
+    for i in range(3):
+        w[i] = amnet.Mu(
+            x[i],
+            y[i],
+            z[i]
+        )
+
+    # Layer 2 weights
+    x[3] = amnet.Affine(
+        np.array(a[3]).reshape((1, 1)),
+        w[1],
+        np.array(b[3]).reshape((1,))
+    )
+    y[3] = amnet.Affine(
+        np.array(c[3]).reshape((1, 1)),
+        w[2],
+        np.array(d[3]).reshape((1,))
+    )
+    z[3] = amnet.Affine(
+        np.array(e[3]).reshape((1, 1)),
+        w[0],
+        np.array(f[3]).reshape((1,))
+    )
+
+    # Layer 2 nonlinearity
+    w[3] = amnet.Mu(
+        x[3],
+        y[3],
+        z[3]
+    )
+
+    return w[3]
+
+
+################################################################################
+# Floating-point functions (for testing)
+################################################################################
+
+def fp_mu(x, y, z):
+    return x if z <= 0 else y
+
+
+def fp_triplexer(inp, a, b, c, d, e, f):
+    assert all([len(p) == 4 for p in [a, b, c, d, e, f]])
+
+    x = [0] * 4
+    y = [0] * 4
+    z = [0] * 4
+    w = [0] * 4
+
+    # Layer 1 weights
+    for i in range(3):
+        x[i] = a[i] * inp + b[i]
+        y[i] = c[i] * inp + d[i]
+        z[i] = e[i] * inp + f[i]
+
+    # Layer 1 nonlinearity
+    for i in range(3):
+        w[i] = fp_mu(x[i], y[i], z[i])
+
+    # Layer 2 weights
+    x[3] = a[3] * w[1] + b[3]
+    y[3] = c[3] * w[2] + d[3]
+    z[3] = e[3] * w[0] + f[3]
+
+    # Layer 2 nonlinearity
+    w[3] = fp_mu(x[3], y[3], z[3])
+
+    return w[3]
