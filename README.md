@@ -13,14 +13,14 @@ from amnet import Variable, Linear, Mu
 x = Variable(2, name='x')
 
 # choose components
-x0 = Linear(np.array([[1, 0]]), x)
-x1 = Linear(np.array([[0, 1]]), x)
+a1 = Linear(np.array([[1, 0]]), x)
+a2 = Linear(np.array([[0, 1]]), x)
 
 # subtract x0 from x1
-z = Linear(np.array([[-1, 1]]), x)
+a3 = Linear(np.array([[-1, 1]]), x)
 
-# maximum of x0 and x1
-phimax = Mu(x0, x1, z)
+# maximum of the two components of x
+phimax = Mu(a1, a2, a3)
 
 # or equivalently, we can instead write
 # phimax = amnet.atoms.max_all(x)
