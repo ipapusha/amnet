@@ -5,7 +5,7 @@
 - [ ] add `find_fixed_point` operation that finds a solution to `x=phi(x)`
 
 # Trees
-- [ ] Add the vgc atom
+- [x] Add the vgc atom
 - [ ] Greedy simplification routines (across linear and stack)
 - [ ] Fix issues in the tracker
 - [ ] efficient `relu_aff` atom (combine relu() and Affine())
