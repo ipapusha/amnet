@@ -705,48 +705,89 @@ class TestSmt(unittest.TestCase):
         )
 
 
-    def test_SmtEncoder_norm_inf1(self):
+    def test_SmtEncoder_norminf1(self):
         x = amnet.Variable(1, name='x')
-        y = amnet.atoms.norm_inf(x)
+        y = amnet.atoms.norminf(x)
 
         self.assertEqual(y.indim, 1)
         self.assertEqual(y.outdim, 1)
 
-        # visualize norm_inf1
-        if VISUALIZE: amnet.vis.quick_vis(y, title='norm_inf1')
+        # visualize norminf1
+        if VISUALIZE: amnet.vis.quick_vis(y, title='norminf1')
 
         # automatic tests
-        def true_norm_inf(fpin):
+        def true_norminf(fpin):
             self.assertEqual(len(fpin), 1)
             return norm(fpin, ord=np.inf)
 
         self.validate_outputs(
             phi=y,
             onvals=itertools.product(self.floatvals, repeat=y.indim),
-            true_f=true_norm_inf
+            true_f=true_norminf
         )
 
-    def test_SmtEncoder_norm_inf3(self):
+    def test_SmtEncoder_norminf3(self):
         x = amnet.Variable(3, name='x')
-        y = amnet.atoms.norm_inf(x)
+        y = amnet.atoms.norminf(x)
 
         self.assertEqual(y.indim, 3)
         self.assertEqual(y.outdim, 1)
 
-        # visualize norm_inf3
-        if VISUALIZE: amnet.vis.quick_vis(y, title='norm_inf3')
+        # visualize norminf3
+        if VISUALIZE: amnet.vis.quick_vis(y, title='norminf3')
 
         # automatic tests
-        def true_norm_inf(fpin):
+        def true_norminf(fpin):
             self.assertEqual(len(fpin), 3)
             return norm(fpin, ord=np.inf)
 
         self.validate_outputs(
             phi=y,
             onvals=itertools.product(self.floatvals2, repeat=y.indim),
-            true_f=true_norm_inf
+            true_f=true_norminf
         )
 
+    def test_SmtEncoder_norm11(self):
+        x = amnet.Variable(1, name='x')
+        y = amnet.atoms.norm1(x)
+
+        self.assertEqual(y.indim, 1)
+        self.assertEqual(y.outdim, 1)
+
+        # visualize norm11
+        if VISUALIZE: amnet.vis.quick_vis(y, title='norm11')
+
+        # automatic tests
+        def true_norm1(fpin):
+            self.assertEqual(len(fpin), 1)
+            return norm(fpin, ord=1)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals, repeat=y.indim),
+            true_f=true_norm1
+        )
+
+    def test_SmtEncoder_norm13(self):
+        x = amnet.Variable(3, name='x')
+        y = amnet.atoms.norm1(x)
+
+        self.assertEqual(y.indim, 3)
+        self.assertEqual(y.outdim, 1)
+
+        # visualize norm13
+        if VISUALIZE: amnet.vis.quick_vis(y, title='norm13')
+
+        # automatic tests
+        def true_norm1(fpin):
+            self.assertEqual(len(fpin), 3)
+            return norm(fpin, ord=1)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals2, repeat=y.indim),
+            true_f=true_norm1
+        )
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)

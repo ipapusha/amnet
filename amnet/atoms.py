@@ -196,7 +196,7 @@ def absval(phi):
     """absolute value: returns vector with ith component equal to |phi_i|"""
     assert phi.outdim >= 1
 
-    def aval_1(x):
+    def absval_1(x):
         assert x.outdim == 1
         return amnet.Mu(
             neg(x),
@@ -205,20 +205,22 @@ def absval(phi):
         )
 
     return thread_over(
-        aval_1,
+        absval_1,
         phi
     )
 
-# begin TODO
-def norm_1(phi):
+
+def norm1(phi):
     """1-norm: returns |phi_1| + ... + |phi_n|"""
     assert phi.outdim >= 1
-    pass
 
-# end TODO
+    return add_list(
+        [absval(select(phi, k))
+         for k in range(phi.outdim)]
+    )
 
 
-def norm_inf(phi):
+def norminf(phi):
     """inf-norm: return max_i(|phi_i|) """
     assert phi.outdim >= 1
 
