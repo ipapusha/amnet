@@ -10,6 +10,23 @@ Contains routines for manipulating and simplifying Amn trees
 
 FPTOL=1e-8
 
+def compose_rewire(phi1, x1, phi2, x2):
+    """
+    Given two AMNs and pointers to their input variables,
+    creates a new AMN that is a composition of the two.
+
+    Given:
+        phi1(x1)
+        phi2(x2)
+    Returns:
+        phi(x2) = phi1(phi2(x2))
+
+    Note: the variable of the new AMN is x2
+    """
+    # TODO: implement
+    pass
+
+
 def simplify(phi):
     """
     Returns a new Amn that is equivalent to phi from the

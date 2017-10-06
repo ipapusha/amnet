@@ -11,6 +11,7 @@
 - [ ] efficient `relu_aff` atom (combine relu() and Affine())
       (niklas)
 - [ ] efficient `relu_nn` atom (full relu nn) (niklas)
+- [ ] implement `compose_rewire`
 
 
 # Examples
