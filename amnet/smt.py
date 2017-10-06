@@ -370,13 +370,24 @@ class SmtEncoder(object):
     def _link_constant(self, phi):
         assert isinstance(phi, amnet.Constant)
 
-        # *overwrite* the output variable of phi to be a z3 RealVal
-        assert self.ctx.is_valid()
-        name = self.ctx.name_of(phi)
+        # # *overwrite* the output variable of phi to be a z3 RealVal
+        # assert self.ctx.is_valid()
+        # name = self.ctx.name_of(phi)
+        #
+        # assert len(phi.b) == len(self.vars[name])  # pre-overwrite
+        # self.vars[name] = [z3.RealVal(bi) for bi in phi.b] # BUG?
+        # assert self.ctx.is_valid()  # post-overwrite
 
-        assert len(phi.b) == len(self.vars[name])  # pre-overwrite
-        self.vars[name] = [z3.RealVal(bi) for bi in phi.b]
-        assert self.ctx.is_valid()  # post-overwrite
+        assert self.ctx.is_valid()
+        cvar = self.var_of(phi)
+
+        # check dimensions
+        assert len(cvar) == len(phi.b)
+
+        # go by-element of cvar
+        for ci, bi in izip(cvar, phi.b):
+            self.solver.add(ci == bi)
+
 
     def _encode(self):
         """

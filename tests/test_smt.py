@@ -66,6 +66,7 @@ class TestSmt(unittest.TestCase):
 
             # run z3 to check for satisfiability
             result = enc.solver.check()
+            #if verbose: print enc.solver
             self.assertTrue(result == z3.sat)
 
             # extract the output
@@ -558,7 +559,7 @@ class TestSmt(unittest.TestCase):
         # visualize sat1
         if VISUALIZE: amnet.vis.quick_vis(y1, title='sat1')
 
-    def donot_test_SmtEncoder_sat3(self):
+    def test_SmtEncoder_sat3(self):
         x = amnet.Variable(3, name='x')
         y1 = amnet.atoms.sat(x)
         y2 = amnet.atoms.sat(x, lo=-3, hi=3)
@@ -586,8 +587,7 @@ class TestSmt(unittest.TestCase):
         self.validate_outputs(
             phi=y1,
             onvals=itertools.product(self.floatvals2, repeat=y1.indim),
-            true_f=lambda z: true_sat3(z, -1, 1),
-            verbose=True
+            true_f=lambda z: true_sat3(z, -1, 1)
         )
 
         self.validate_outputs(
