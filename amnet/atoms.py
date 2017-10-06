@@ -115,45 +115,45 @@ def neg(phi):
     )
 
 
-# begin TODO
 def sat(phi, lo=-1, hi=1):
     """saturation: returns vector with ith component equal to sat(phi_i)"""
     assert phi.outdim >= 1
     assert lo < hi
 
-    # # one-dimensional saturation constants
-    # locon1 = amnet.Constant(phi, np.ones(1) * lo)
-    # hicon1 = amnet.Constant(phi, np.ones(1) * hi)
-    # assert locon1.outdim == 1
-    # assert hicon1.outdim == 1
-    #
-    # def sat_1(x):
-    #     assert x.outdim == 1
-    #     clip_lo = amnet.Mu(
-    #         locon1,
-    #         x,
-    #         sub2(x, locon1)
-    #     )
-    #     clip_hi = amnet.Mu(
-    #         hicon1,
-    #         clip_lo,
-    #         sub2(hicon1, x)
-    #     )
-    #     return clip_hi
-    #
-    # return thread_over(
-    #     sat_1,
-    #     phi
-    # )
+    # OLD: inefficient
+    # locon = amnet.Constant(phi, np.ones(phi.outdim) * lo)
+    # hicon = amnet.Constant(phi, np.ones(phi.outdim) * hi)
+    # return max2(min2(phi, hicon), locon)
 
-    locon = amnet.Constant(phi, np.ones(phi.outdim) * lo)
-    hicon = amnet.Constant(phi, np.ones(phi.outdim) * hi)
+    # one-dimensional saturation constants
+    locon1 = amnet.Constant(phi, np.ones(1) * lo)
+    hicon1 = amnet.Constant(phi, np.ones(1) * hi)
+    assert locon1.outdim == 1
+    assert hicon1.outdim == 1
 
-    return max2(min2(phi, hicon), locon)
+    def sat_1(x):
+        assert x.outdim == 1
+        clip_lo = amnet.Mu(
+            locon1,
+            x,
+            sub2(x, locon1)
+        )
+        clip_hi = amnet.Mu(
+            hicon1,
+            clip_lo,
+            sub2(hicon1, x)
+        )
+        return clip_hi
+
+    return thread_over(
+        sat_1,
+        phi
+    )
 
 
-def dz(phi):
-    """deadzone: returns vector with ith component equal to sat(dz_i)"""
+# begin TODO
+def dz(phi, lo=-1, hi=1):
+    """deadzone: returns vector with ith component equal to dz(phi_i)"""
     assert phi.outdim >= 1
     pass
 
