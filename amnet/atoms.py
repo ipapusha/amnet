@@ -105,14 +105,35 @@ def identity(phi):
     )
 
 
+def scale(c, phi):
+    """ returns vector with each component scaled by c"""
+    assert phi.outdim >= 1
+
+    # XXX: make more efficient by peeking inside Affine, Linear, Stack, and Mu
+    return amnet.Linear(
+        np.diag(c*np.ones(phi.outdim)),
+        phi
+    )
+
+
 def neg(phi):
     """returns the negative of phi """
     assert phi.outdim >= 1
-    # XXX: make more efficient by peeking inside Affine, Linear, Stack, and Mu
-    return amnet.Linear(
-        np.diag(-np.ones(phi.outdim)),
-        phi
-    )
+
+    # # XXX: make more efficient by peeking inside Affine, Linear, Stack, and Mu
+    # return amnet.Linear(
+    #     np.diag(-np.ones(phi.outdim)),
+    #     phi
+    # )
+    return scale(-1, phi)
+
+
+def zero_from(phi, dim=1):
+    """ returns a constant zero of given dimension """
+    assert phi.outdim >= 1
+    assert dim >= 1
+
+    return amnet.Constant(phi, np.zeros(dim))
 
 
 def sat(phi, lo=-1, hi=1):
@@ -165,7 +186,7 @@ def dz(phi, lo=-1, hi=1):
     # one-dimensional constants
     locon1 = amnet.Constant(phi, np.ones(1) * lo)
     hicon1 = amnet.Constant(phi, np.ones(1) * hi)
-    zero1 = amnet.Constant(phi, np.zeros(1))
+    zero1 = zero_from(phi, dim=1)
     assert locon1.outdim == 1
     assert hicon1.outdim == 1
     assert zero1.outdim == 1
@@ -358,13 +379,13 @@ def relu_old(phi):
     """
     assert phi.outdim >= 1
 
-    zero = amnet.Constant(phi, np.zeros(phi.outdim))
-    assert zero.outdim == phi.outdim
+    zeron = zero_from(phi, dim=phi.outdim)
+    assert zeron.outdim == phi.outdim
 
     return thread_over(
         max2_1,
         phi,
-        zero
+        zeron
     )
 
 
@@ -377,7 +398,7 @@ def relu(phi):
     assert phi.outdim >= 1
 
     # one-dimensional zero
-    zero1 = amnet.Constant(phi, np.zeros(1))
+    zero1 = zero_from(phi, dim=1)
     assert zero1.outdim == 1
 
     # use the idea that max(x, 0) == mu(0, x, x)
@@ -713,4 +734,32 @@ def cmp_neq(x, y, z):
         x,
         z,
         neg(z)
+    )
+
+
+################################################################################
+# Control oriented atoms
+################################################################################
+def phase_vgc(e, edot, alpha=1.0):
+    """
+    phase_vgc(e, edot) = {alpha * e, if e*edot > 0,
+                         {0, if e*edot <= 0
+    e and edot must be one-dimensional AMNs
+    """
+    assert e.outdim == 1 and \
+           edot.outdim == 1
+
+    zero1 = zero_from(e, dim=1)
+    ae = scale(alpha, e)
+
+    return gate_or(
+        gate_or(
+            zero1,
+            ae,
+            neg(e),
+            neg(edot),
+        ),
+        ae,
+        e,
+        edot
     )
