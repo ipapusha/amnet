@@ -116,15 +116,10 @@ def scale(c, phi):
     )
 
 
-def neg(phi):
+def negate(phi):
     """returns the negative of phi """
     assert phi.outdim >= 1
 
-    # # XXX: make more efficient by peeking inside Affine, Linear, Stack, and Mu
-    # return amnet.Linear(
-    #     np.diag(-np.ones(phi.outdim)),
-    #     phi
-    # )
     return scale(-1, phi)
 
 
@@ -220,7 +215,7 @@ def absval(phi):
     def absval_1(x):
         assert x.outdim == 1
         return amnet.Mu(
-            neg(x),
+            negate(x),
             x,
             x
         )
@@ -428,7 +423,7 @@ def neg_part(phi):
     """
     neg_part(phi)_i = max(-phi_i, 0)
     """
-    return relu(neg(phi))
+    return relu(negate(phi))
 
 
 def min2_1(x, y):
@@ -695,7 +690,7 @@ def cmp_ge(x, y, z):
     return amnet.Mu(
         x,
         y,
-        neg(z)
+        negate(z)
     )
 
 
@@ -704,7 +699,7 @@ def cmp_lt(x, y, z):
     return gate_not(
         x,
         y,
-        neg(z)
+        negate(z)
     )
 
 
@@ -723,7 +718,7 @@ def cmp_eq(x, y, z):
         x,
         y,
         z,
-        neg(z)
+        negate(z)
     )
 
 
@@ -733,7 +728,7 @@ def cmp_neq(x, y, z):
         y,
         x,
         z,
-        neg(z)
+        negate(z)
     )
 
 
@@ -757,8 +752,8 @@ def phase_vgc(e, edot, alpha=1.0):
         gate_or(
             zero1,
             ae,
-            neg(e),
-            neg(edot),
+            negate(e),
+            negate(edot),
         ),
         ae,
         e,

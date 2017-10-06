@@ -74,7 +74,7 @@ class TestAtoms(unittest.TestCase):
         )
         self.assertEqual(y.outdim, 3)
 
-        z = amnet.atoms.neg(y)
+        z = amnet.atoms.negate(y)
         self.assertEqual(z.outdim, y.outdim)
 
         def aff(x): return np.dot(w, x) + b
