@@ -27,6 +27,12 @@ class TestSmt(unittest.TestCase):
         cls.floatvals3 = np.linspace(-5., 5., 3)
         cls.FPTOL = 1e-8
 
+        # set up global z3 parameters
+        # parameters from https://stackoverflow.com/a/12516269
+        #z3.set_param('auto_config', False)
+        #z3.set_param('smt.case_split', 5)
+        #z3.set_param('smt.relevancy', 2)
+
     def validate_outputs(self, phi, onvals, true_f=None, verbose=False):
         # encode phi using default context and solver
         enc = amnet.smt.SmtEncoder(phi=phi, solver=None)
@@ -471,44 +477,44 @@ class TestSmt(unittest.TestCase):
             true_f=true_z
         )
 
-    def test_SmtEncoder_aval1(self):
+    def test_SmtEncoder_absval1(self):
         x = amnet.Variable(1, name='x')
-        y = amnet.atoms.aval(x)
+        y = amnet.atoms.absval(x)
 
         self.assertEqual(y.outdim, 1)
         self.assertEqual(y.indim, 1)
 
-        def true_aval(fpin):
+        def true_absval(fpin):
             return abs(fpin)
 
         self.validate_outputs(
             phi=y,
             onvals=itertools.product(self.floatvals, repeat=y.indim),
-            true_f = true_aval
+            true_f = true_absval
         )
 
-        # visualize aval1
-        if VISUALIZE: amnet.vis.quick_vis(y, title='aval1')
+        # visualize absval1
+        if VISUALIZE: amnet.vis.quick_vis(y, title='absval1')
 
-    def test_SmtEncoder_aval3(self):
+    def test_SmtEncoder_absval3(self):
         x = amnet.Variable(3, name='x')
-        y = amnet.atoms.aval(x)
+        y = amnet.atoms.absval(x)
 
         self.assertEqual(y.outdim, 3)
         self.assertEqual(y.indim, 3)
 
-        def true_aval(fpin):
+        def true_absval(fpin):
             x1, x2, x3 = fpin
             return np.array([abs(x1), abs(x2), abs(x3)])
 
         self.validate_outputs(
             phi=y,
             onvals=itertools.product(self.floatvals2, repeat=y.indim),
-            true_f=true_aval
+            true_f=true_absval
         )
 
-        # visualize aval3
-        if VISUALIZE: amnet.vis.quick_vis(y, title='aval3')
+        # visualize absval3
+        if VISUALIZE: amnet.vis.quick_vis(y, title='absval3')
 
     def test_SmtEncoder_sat1(self):
         x = amnet.Variable(1, name='x')
@@ -601,6 +607,103 @@ class TestSmt(unittest.TestCase):
             onvals=itertools.product(self.floatvals2, repeat=y3.indim),
             true_f=lambda z: true_sat3(z, -2, 1.5)
         )
+
+    def test_SmtEncoder_dz1(self):
+        x = amnet.Variable(1, name='x')
+        y1 = amnet.atoms.dz(x)
+        y2 = amnet.atoms.dz(x, lo=-3, hi=3)
+        y3 = amnet.atoms.dz(x, lo=-2, hi=1.5)
+
+        self.assertEqual(y1.outdim, 1)
+        self.assertEqual(y1.indim, 1)
+        self.assertEqual(y2.outdim, 1)
+        self.assertEqual(y2.indim, 1)
+        self.assertEqual(y3.outdim, 1)
+        self.assertEqual(y3.indim, 1)
+
+        # manual tests
+        self.assertAlmostEqual(norm(y1.eval(np.array([-2])) - np.array([-1])), 0)
+        self.assertAlmostEqual(norm(y1.eval(np.array([-0.5])) - np.array([0])), 0)
+        self.assertAlmostEqual(norm(y1.eval(np.array([0])) - np.array([0])), 0)
+        self.assertAlmostEqual(norm(y1.eval(np.array([0.6])) - np.array([0])), 0)
+        self.assertAlmostEqual(norm(y1.eval(np.array([1.6])) - np.array([0.6])), 0)
+
+        # automatic tests
+        def true_dz1(fpval, lo, hi):
+            x = fpval
+            if lo <= x <= hi:
+                return 0
+            elif x < lo:
+                return x-lo
+            else:
+                return x-hi
+
+        self.validate_outputs(
+            phi=y1,
+            onvals=itertools.product(self.floatvals, repeat=y1.indim),
+            true_f=lambda z: true_dz1(z, -1, 1)
+        )
+        self.validate_outputs(
+            phi=y2,
+            onvals=itertools.product(self.floatvals, repeat=y2.indim),
+            true_f=lambda z: true_dz1(z, -3, 3)
+        )
+        self.validate_outputs(
+            phi=y3,
+            onvals=itertools.product(self.floatvals, repeat=y3.indim),
+            true_f=lambda z: true_dz1(z, -2, 1.5)
+        )
+
+        # visualize dz1
+        if VISUALIZE: amnet.vis.quick_vis(y1, title='dz1')
+
+    def test_SmtEncoder_dz3(self):
+        x = amnet.Variable(3, name='x')
+        y1 = amnet.atoms.dz(x)
+        y2 = amnet.atoms.dz(x, lo=-3, hi=3)
+        y3 = amnet.atoms.dz(x, lo=-2, hi=1.5)
+
+        self.assertEqual(y1.outdim, 3)
+        self.assertEqual(y1.indim, 3)
+        self.assertEqual(y2.outdim, 3)
+        self.assertEqual(y2.indim, 3)
+        self.assertEqual(y3.outdim, 3)
+        self.assertEqual(y3.indim, 3)
+
+        # manual tests
+        self.assertAlmostEqual(norm(y1.eval(np.array([-2, 1.6, 0.5])) - np.array([-1, 0.6, 0])), 0)
+        self.assertAlmostEqual(norm(y2.eval(np.array([-2, 1.6, 0.5])) - np.array([0, 0, 0])), 0)
+        self.assertAlmostEqual(norm(y3.eval(np.array([-2, 1.6, 0.5])) - np.array([0, 0.1, 0])), 0)
+
+        # visualize dz3
+        if VISUALIZE: amnet.vis.quick_vis(y1, title='dz3')
+
+        # automatic tests
+        def true_dz3(fpin, lo, hi):
+            retv = np.array(fpin)
+            retv[(retv >= lo) & (retv <= hi)] = 0
+            retv[retv > hi] -= hi
+            retv[retv < lo] -= lo
+            return retv
+
+        self.validate_outputs(
+            phi=y1,
+            onvals=itertools.product(self.floatvals2, repeat=y1.indim),
+            true_f=lambda z: true_dz3(z, -1, 1)
+        )
+
+        self.validate_outputs(
+            phi=y2,
+            onvals=itertools.product(self.floatvals2, repeat=y2.indim),
+            true_f=lambda z: true_dz3(z, -3, 3)
+        )
+
+        self.validate_outputs(
+            phi=y3,
+            onvals=itertools.product(self.floatvals2, repeat=y3.indim),
+            true_f=lambda z: true_dz3(z, -2, 1.5)
+        )
+
 
     def test_SmtEncoder_norm_inf1(self):
         x = amnet.Variable(1, name='x')

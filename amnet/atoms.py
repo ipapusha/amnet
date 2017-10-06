@@ -151,14 +151,48 @@ def sat(phi, lo=-1, hi=1):
     )
 
 
-# begin TODO
 def dz(phi, lo=-1, hi=1):
     """deadzone: returns vector with ith component equal to dz(phi_i)"""
     assert phi.outdim >= 1
-    pass
+    assert lo < hi
+
+    # OLD: inefficient
+    # locon = amnet.Constant(phi, np.ones(phi.outdim) * lo)
+    # hicon = amnet.Constant(phi, np.ones(phi.outdim) * hi)
+    # zero = amnet.Constant(phi, np.zeros(phi.outdim))
+    # return min2(max2(zero, sub2(phi, hicon)), sub2(phi, locon))
+
+    # one-dimensional constants
+    locon1 = amnet.Constant(phi, np.ones(1) * lo)
+    hicon1 = amnet.Constant(phi, np.ones(1) * hi)
+    zero1 = amnet.Constant(phi, np.zeros(1))
+    assert locon1.outdim == 1
+    assert hicon1.outdim == 1
+    assert zero1.outdim == 1
+
+    def dz_1(x):
+        assert x.outdim == 1
+        hival = sub2(x, hicon1)
+        loval = sub2(x, locon1)
+        clip_hi = amnet.Mu(
+            zero1,
+            hival,
+            hival
+        )
+        clip_lo = amnet.Mu(
+            loval,
+            clip_hi,
+            loval
+        )
+        return clip_lo
+
+    return thread_over(
+        dz_1,
+        phi
+    )
 
 
-def aval(phi):
+def absval(phi):
     """absolute value: returns vector with ith component equal to |phi_i|"""
     assert phi.outdim >= 1
 
@@ -175,11 +209,13 @@ def aval(phi):
         phi
     )
 
-
+# begin TODO
 def norm_1(phi):
     """1-norm: returns |phi_1| + ... + |phi_n|"""
     assert phi.outdim >= 1
     pass
+
+# end TODO
 
 
 def norm_inf(phi):
@@ -187,15 +223,13 @@ def norm_inf(phi):
     assert phi.outdim >= 1
 
     # OLD: inefficent
-    # return max_all(aval(phi))
+    # return max_all(absval(phi))
 
     # more efficient because select() short-circuits for 1-d inputs
     return max_list(
-       [aval(select(phi, k))
+       [absval(select(phi, k))
         for k in range(phi.outdim)]
     )
-
-# end TODO
 
 
 ################################################################################
@@ -207,6 +241,21 @@ def add2(x, y):
     assert x.outdim == y.outdim
     n = x.outdim
 
+    # OPTIMIZATION: special case for constants
+    if isinstance(y, amnet.Constant):
+        return amnet.Affine(
+            np.eye(n),
+            x,
+            y.b
+        )
+    if isinstance(x, amnet.Constant):
+        return amnet.Affine(
+            np.eye(n),
+            y,
+            x.b
+        )
+
+    # general case for non-constants
     xy = amnet.Stack(x, y)
 
     return amnet.Linear(
@@ -231,6 +280,21 @@ def sub2(x, y):
     assert x.outdim == y.outdim
     n = x.outdim
 
+    # OPTIMIZATION: special case for constants
+    if isinstance(y, amnet.Constant):
+        return amnet.Affine(
+            np.eye(n),
+            x,
+            -y.b
+        )
+    if isinstance(x, amnet.Constant):
+        return amnet.Affine(
+            -np.eye(n),
+            y,
+            x.b
+        )
+
+    # general case for non-constants
     xy = amnet.Stack(x, y)
 
     return amnet.Linear(
