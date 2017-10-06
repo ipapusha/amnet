@@ -602,6 +602,48 @@ class TestSmt(unittest.TestCase):
             true_f=lambda z: true_sat3(z, -2, 1.5)
         )
 
+    def test_SmtEncoder_norm_inf1(self):
+        x = amnet.Variable(1, name='x')
+        y = amnet.atoms.norm_inf(x)
+
+        self.assertEqual(y.indim, 1)
+        self.assertEqual(y.outdim, 1)
+
+        # visualize norm_inf1
+        if VISUALIZE: amnet.vis.quick_vis(y, title='norm_inf1')
+
+        # automatic tests
+        def true_norm_inf(fpin):
+            self.assertEqual(len(fpin), 1)
+            return norm(fpin, ord=np.inf)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals, repeat=y.indim),
+            true_f=true_norm_inf
+        )
+
+    def test_SmtEncoder_norm_inf3(self):
+        x = amnet.Variable(3, name='x')
+        y = amnet.atoms.norm_inf(x)
+
+        self.assertEqual(y.indim, 3)
+        self.assertEqual(y.outdim, 1)
+
+        # visualize norm_inf3
+        if VISUALIZE: amnet.vis.quick_vis(y, title='norm_inf3')
+
+        # automatic tests
+        def true_norm_inf(fpin):
+            self.assertEqual(len(fpin), 3)
+            return norm(fpin, ord=np.inf)
+
+        self.validate_outputs(
+            phi=y,
+            onvals=itertools.product(self.floatvals2, repeat=y.indim),
+            true_f=true_norm_inf
+        )
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)

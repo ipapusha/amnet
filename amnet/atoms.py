@@ -184,7 +184,16 @@ def norm_1(phi):
 
 def norm_inf(phi):
     """inf-norm: return max_i(|phi_i|) """
-    return max_all(aval(phi))
+    assert phi.outdim >= 1
+
+    # OLD: inefficent
+    # return max_all(aval(phi))
+
+    # more efficient because select() short-circuits for 1-d inputs
+    return max_list(
+       [aval(select(phi, k))
+        for k in range(phi.outdim)]
+    )
 
 # end TODO
 
@@ -408,7 +417,6 @@ def min_aff(A, b, phi):
             ))
     assert len(outlist) == m
     return min_list(outlist)
-
 
 
 def triplexer(phi, a, b, c, d, e, f):
