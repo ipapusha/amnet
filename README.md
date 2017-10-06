@@ -16,13 +16,13 @@ x = Variable(2, name='x')
 a1 = Linear(np.array([[1, 0]]), x)
 a2 = Linear(np.array([[0, 1]]), x)
 
-# subtract x0 from x1
+# find difference
 a3 = Linear(np.array([[-1, 1]]), x)
 
-# maximum of the two components of x
+# if a3 <= 0, returns a1; otherwise a2
 phimax = Mu(a1, a2, a3)
 
-# or equivalently, we can instead write
+# equivalently, we can also write
 # phimax = amnet.atoms.max_all(x)
 
 print phimax
