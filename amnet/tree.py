@@ -4,13 +4,9 @@ import amnet
 
 from collections import deque
 
-import copy
-
 """
 Contains routines for manipulating and simplifying Amn trees
 """
-
-FPTOL=1e-8
 
 
 def compose_rewire(phi1, phi2):
@@ -90,7 +86,7 @@ def descendants(phi):
     q = deque([phi])  # queue of nodes to check
     d = list()        # list of descendants
 
-    while q:
+    while len(q) > 0:
         node = q.popleft()
         # cannot use not(node in d) because Python's `in`
         # checks for `==` or `is` equality;
@@ -108,6 +104,8 @@ def descendants(phi):
 ################################################################################
 # ABANDONED METHODS
 ################################################################################
+
+FPTOL=1e-8
 
 def simplify(phi):
     """
