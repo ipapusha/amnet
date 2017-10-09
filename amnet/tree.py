@@ -4,6 +4,8 @@ import amnet
 
 from collections import deque
 
+import copy
+
 """
 Contains routines for manipulating and simplifying Amn trees
 """
@@ -12,50 +14,44 @@ Contains routines for manipulating and simplifying Amn trees
 def compose_rewire(phi1, phi2):
     """
     Given two AMNs and pointers to their input variables,
-    creates a new AMN that is a composition of the two.
+    rewires the first AMN's variable to point to the output of the second AMN.
 
     Given:
         phi1(x1)
         phi2(x2)
-    Returns:
-        phi(x2) = phi1(phi2(x2))
-
-    Note: the variable of the new AMN is x2
+    Side effects:
+        phi1 is now rewired to
+        phi(x) = phi1(phi2(x)),
+        where x = x2 (the variable of phi2)
+    Note: x1 is thrown away!
+    Note: this routine modifies phi1!
     """
+    # cannot compose when dimensions are wrong
     assert phi1.indim == phi2.outdim
 
-    # base case: variable node
-    # throw away node
-    if isinstance(phi1, amnet.Variable):
-        return
+    # it does not make sense to compose with phi1 a variable
+    assert not (isinstance(phi1, amnet.Variable))
 
-    # base case: already did the rewire
-    if phi1 == phi2:
-        return
+    # compute the list of descendants of phi1 and phi2
+    desc1 = descendants(phi1)
+    desc2 = descendants(phi2)
 
-    # depth-first: somewhere in the middle
-    # 1. recurse down
-    if hasattr(phi1, 'x'):
-        compose_rewire(phi1.x, phi2)
-    if hasattr(phi1, 'y'):
-        compose_rewire(phi1.y, phi2)
-    if hasattr(phi1, 'z'):
-        compose_rewire(phi1.z, phi2)
+    # the trees should have no overlaps
+    nodeids1 = set([id(d) for d in desc1])
+    nodeids2 = set([id(d) for d in desc2])
+    assert len(nodeids1) == len(desc1)
+    assert len(nodeids2) == len(desc2)
+    assert len(nodeids1 & nodeids2) == 0
 
-    # 2. change the indim
-    phi1.indim = phi2.outdim
+    # determine the variables x1, x2 associated with phi1, phi2
+    vars1 = [d for d in desc1 if isinstance(d, amnet.Variable)]
+    vars2 = [d for d in desc2 if isinstance(d, amnet.Variable)]
+    assert len(vars1) == 1
+    assert len(vars2) == 1
+    x1 = vars1[0]
+    x2 = vars2[0]
 
-    # 3. if child child is a variable, rewire it
-    # rewire phi1's variable to point to phi2
-    if hasattr(phi1, 'x') and isinstance(phi1.x, amnet.Variable):
-        phi1.x = phi2
-    if hasattr(phi1, 'y') and isinstance(phi1.y, amnet.Variable):
-        assert isinstance(phi1, amnet.Mu) or \
-               isinstance(phi1, amnet.Stack)
-        phi1.y = phi2
-    if hasattr(phi1, 'z') and isinstance(phi1.z, amnet.Variable):
-        assert isinstance(phi1, amnet.Mu)
-        phi1.z = phi2
+    # TODO: rewire here
 
 
 def children(phi):
@@ -95,10 +91,91 @@ def descendants(phi):
             # node is new
             d.append(node)
             # add its children to check for reachability
-            q.extend(children(node))
+            q.extend([c for c in children(node) if c not in d])
 
     # done finding reachable nodes
     return d
+
+
+def valid_tree(phi):
+    """
+    goes through the tree of phi and ensures that
+    1. the dimensions work out
+    2. there is only one variable
+    3. there are no directed cycles
+    """
+    q = deque([phi])  # queue of nodes to check
+    visited = list()  # already checked
+
+    # save the indim of the root node, and make sure all the indims
+    # of the children are the same
+    indim = phi.indim
+    retval = True
+    varsfound = 0
+
+    while len(q) > 0:
+        # node to check
+        node = q.popleft()
+
+        # check outdim
+        if isinstance(node, amnet.Variable):
+            retval &= (node.outdim == node.indim)
+            varsfound += 1
+        elif isinstance(node, amnet.Linear):
+            m, n = node.w.shape
+            retval &= (node.outdim == m)
+            retval &= (node.x.outdim == n)
+            retval &= (all([bi == 0 for bi in node.b]))  # check value
+        elif isinstance(node, amnet.Constant):
+            retval &= (node.outdim == len(node.b))
+            retval &= (all([wij == 0 for wij in np.nditer(node.w)]))  # check value
+        elif isinstance(node, amnet.Affine):
+            m, n = node.w.shape
+            retval &= (node.outdim == m)
+            retval &= (node.x.outdim == n)
+            retval &= (m == len(node.b))
+        elif isinstance(node, amnet.Mu):
+            retval &= (node.outdim == node.x.outdim)
+            retval &= (node.outdim == node.y.outdim)
+            retval &= (node.z.outdim == 1)
+        elif isinstance(node, amnet.Stack):
+            retval &= (node.outdim == node.x.outdim + node.y.outdim)
+        else:
+            retval = False  # unknown node type
+
+        # check indim
+        retval &= (node.indim == indim)
+
+        # short-circuit if an inconsistency has been found
+        if not retval:
+            return False
+
+        # add children to queue
+        if not(any(node is e for e in visited)):
+            visited.append(node)
+            #q.extend(children(node))
+            q.extend([c for c in children(node) if c not in visited])
+
+    # finished iterating
+    return (varsfound == 1)
+
+
+def is_cyclic(phi):
+    # 1. walk through the graph to determine available nodes
+    white = deque(descendants(phi))  # all reachable nodes
+    stk = deque([])  # stack for dfs
+    gray = list()    # exploring set
+    black = list()   # explored set
+
+    # 2. walk through the graph in DFS order
+    while len(white) > 0:
+        # get a new white vertex
+        stk.append(white.popleft())
+
+        #
+        while len(stk) > 0:
+            pass
+
 
 
 ################################################################################
