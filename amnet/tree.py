@@ -157,6 +157,7 @@ def valid_tree(phi):
             q.extend([c for c in children(node) if c not in visited])
 
     # finished iterating
+    # TODO: also check if graph is cyclic
     return (varsfound == 1)
 
 
