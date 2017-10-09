@@ -4,6 +4,7 @@ set -e
 coverage erase
 PYTHONPATH=. coverage run -a --source=. tests/test_atoms.py
 PYTHONPATH=. coverage run -a --source=. tests/test_smt.py
+PYTHONPATH=. coverage run -a --source=. tests/test_tree.py
 PYTHONPATH=. coverage run -a --source=. tests/test_tf.py
 coverage report -m
 coverage html
