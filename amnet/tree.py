@@ -175,6 +175,7 @@ def is_cyclic(phi):
         #
         while len(stk) > 0:
             pass
+            # TODO
 
 
 
