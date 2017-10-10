@@ -181,6 +181,112 @@ def is_cyclic(phi):
 
 
 ################################################################################
+# Generic graph algorithms
+################################################################################
+
+def sample_graph():
+    """
+    returns graph on Fig 22.4 of CLRS 3rd ed.
+    """
+    G = dict()
+    G['u'] = ['x', 'v']
+    G['v'] = ['y']
+    G['w'] = ['y', 'z']
+    G['x'] = ['v']
+    G['y'] = ['x']
+    G['z'] = ['z']
+    return G
+
+
+def dfs(G):
+    """
+    G is a dict :: node -> [node]
+    with g[n] = all the nodes one-step reachable from n
+    """
+
+    # data structure for labeling nodes
+    # only one instance of this object should exist
+    class DfsData(object):
+        def __init__(self):
+            self.color = dict()  # node -> 'WHITE', 'GRAY', or 'BLACK'
+            self.pred = dict()   # node -> node (predecessor)
+            self.dtime = dict()  # node -> int (discover time)
+            self.ftime = dict()  # node -> int (finish time)
+            self.time = 0        # global time
+
+    data = DfsData()
+
+    # 1. initialize dfs data
+    for u in G:
+        data.color[u] = 'WHITE'
+        data.pred[u] = None
+        data.dtime[u] = float('inf')
+        data.ftime[u] = float('inf')
+        data.time = 0
+
+    assert all([data.color[u] == 'WHITE' for u in G])
+    assert all([data.pred[u] is None for u in G])
+
+    # 2. visit every connected component
+    for u in G:
+        if data.color[u] == 'WHITE':
+            dfs_visit(G, u, data)
+
+
+def dfs_visit(G, u, data):
+    stk = deque([])  # empty stack (push/pop on the right)
+    stk.append(u)
+
+    while len(stk) > 0:
+        # look at a new vertex
+        print 'Stack: %s' % stk
+        n = stk.pop()
+        print 'Popped: %s' % n
+
+        # classify the vertex
+        if data.color[n] == 'WHITE':
+            # discovered white vertex (on init), or a tree edge
+            data.time += 1
+            data.dtime[n] = data.time
+            data.color[n] = 'GRAY'
+            print 'Colored %s WHITE->GRAY' % n
+
+            stk.append(n)
+            print 'Pushed: %s' % n
+
+            # explore edge (n, v)
+            for v in G[n]:
+                if data.color[v] == 'WHITE':
+                    print 'Found edge %s->%s' % (n, v)
+                    data.pred[v] = n
+                    stk.append(v)
+                    print 'Pushed: %s' % v
+
+        elif data.color[n] == 'GRAY':
+            # back edge
+            print 'Found backedge at %s' % n
+
+            # blacken n, it's finished
+            data.time += 1
+            data.ftime[n] = data.time
+            data.color[n] = 'BLACK'
+
+        elif data.color[n] == 'BLACK':
+            # forward or cross-edge
+
+            # do nothing, already visited
+            pass
+        else:
+            assert False
+
+
+if __name__ == '__main__':
+    G = sample_graph()
+    print G
+    dfs(G)
+
+
+################################################################################
 # ABANDONED METHODS
 ################################################################################
 
