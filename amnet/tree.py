@@ -5,6 +5,7 @@ import amnet
 from collections import deque
 
 import copy
+from math import isinf
 
 """
 Contains routines for manipulating and simplifying Amn trees
@@ -184,17 +185,32 @@ def is_cyclic(phi):
 # Generic graph algorithms
 ################################################################################
 
-def sample_graph():
+def sample_graph(num):
     """
-    returns graph on Fig 22.4 of CLRS 3rd ed.
+    returns sample graphs
     """
     G = dict()
-    G['u'] = ['x', 'v']
-    G['v'] = ['y']
-    G['w'] = ['y', 'z']
-    G['x'] = ['v']
-    G['y'] = ['x']
-    G['z'] = ['z']
+
+    if num == 1:
+        # graph on Fig 22.4 of CLRS 3rd ed.
+        G['u'] = ['x', 'v']
+        G['v'] = ['y']
+        G['w'] = ['y', 'z']
+        G['x'] = ['v']
+        G['y'] = ['x']
+        G['z'] = ['z']
+    elif num == 2:
+        # graph on Fig 22.6 of CLRS 3rd ed.
+        G['q'] = ['s', 'w', 't']
+        G['r'] = ['u', 'y']
+        G['s'] = ['v']
+        G['t'] = ['x', 'y']
+        G['u'] = ['y']
+        G['v'] = ['w']
+        G['w'] = ['s']
+        G['x'] = ['z']
+        G['y'] = ['q']
+        G['z'] = ['x']
     return G
 
 
@@ -227,61 +243,50 @@ def dfs(G):
     assert all([data.color[u] == 'WHITE' for u in G])
     assert all([data.pred[u] is None for u in G])
 
+
     # 2. visit every connected component
     for u in G:
         if data.color[u] == 'WHITE':
             dfs_visit(G, u, data)
+            #dfs_visit_iterative(G, u, data)
 
+    # 3. classify edges
+    assert all([not(isinf(data.dtime[u])) for u in G])
+    assert all([not(isinf(data.ftime[u])) for u in G])
 
 def dfs_visit(G, u, data):
-    stk = deque([])  # empty stack (push/pop on the right)
-    stk.append(u)
+    # white vertex u has just been discovered
+    data.time += 1
+    data.dtime[u] = data.time
+    data.color[u] = 'GRAY'
 
-    while len(stk) > 0:
-        # look at a new vertex
-        print 'Stack: %s' % stk
-        n = stk.pop()
-        print 'Popped: %s' % n
+    print 'Colored %s WHITE->GRAY' % u
 
-        # classify the vertex
-        if data.color[n] == 'WHITE':
-            # discovered white vertex (on init), or a tree edge
-            data.time += 1
-            data.dtime[n] = data.time
-            data.color[n] = 'GRAY'
-            print 'Colored %s WHITE->GRAY' % n
-
-            stk.append(n)
-            print 'Pushed: %s' % n
-
-            # explore edge (n, v)
-            for v in G[n]:
-                if data.color[v] == 'WHITE':
-                    print 'Found edge %s->%s' % (n, v)
-                    data.pred[v] = n
-                    stk.append(v)
-                    print 'Pushed: %s' % v
-
-        elif data.color[n] == 'GRAY':
-            # back edge
-            print 'Found backedge at %s' % n
-
-            # blacken n, it's finished
-            data.time += 1
-            data.ftime[n] = data.time
-            data.color[n] = 'BLACK'
-
-        elif data.color[n] == 'BLACK':
-            # forward or cross-edge
-
-            # do nothing, already visited
-            pass
+    # explore edge (u, v)
+    # tree edge or forward edge <=> u.d < v.d < v.f < u.f
+    # back edge <=> v.d <= u.d < u.f <= v.f
+    # cross edge <=> v.d < v.f < u.d < u.f
+    for v in G[u]:
+        print 'Exploring edge %s->%s' % (u, v)
+        if data.color[v] == 'WHITE':
+            print 'Found tree edge: %s->%s' % (u, v)
+            data.pred[v] = u
+            dfs_visit(G, v, data)
+        elif data.color[v] == 'GRAY':
+            print 'Found back edge: %s->%s' % (u, v)
+            assert data.dtime[v] <= data.dtime[u] < data.ftime[u] <= data.ftime[v]
         else:
-            assert False
+            print 'Found forward/cross edge: %s->%s (ignoring)' % (u, v)
+
+    # blacken u, it's finished
+    data.time += 1
+    data.ftime[u] = data.time
+    data.color[u] = 'BLACK'
+    print 'Colored %s BLACK' % u
 
 
 if __name__ == '__main__':
-    G = sample_graph()
+    G = sample_graph(2)
     print G
     dfs(G)
 
