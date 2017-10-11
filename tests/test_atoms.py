@@ -142,6 +142,27 @@ class TestAtoms(unittest.TestCase):
             s = relu(np.array([yv]))
             self.assertEqual(r, s)
 
+    def test_relu_aff(self):
+        w = np.random.rand(4,4)
+        b = np.random.rand(4)
+        x = amnet.Variable(4, name='x')
+
+        # phi to test
+        phi_relu_aff = amnet.atoms.relu_aff(w, x, b)
+
+        # true relu(Affine())
+        def composed_relu_aff(w, x, b): return amnet.atoms.relu(amnet.Affine(w, x, b))
+        true_relu_aff = composed_relu_aff(w, x, b)
+
+        for xv,yv,zv,wv in itertools.product(self.floatvals2, repeat=4):
+            xyzwv = np.array([xv, yv, zv, wv])
+            r = phi_relu_aff.eval(xyzwv) # 4-d relu_aff of x
+            s = true_relu_aff.eval(xyzwv)
+            self.assertTrue(len(r) == 4)
+            self.assertTrue(len(s) == 4)
+            self.assertTrue(all(r == s))
+            self.assertListEqual(r.tolist(), s.tolist())
+
     def test_max2_min2(self):
         xy = amnet.Variable(6, name='xy')
         x = amnet.Linear(

@@ -328,12 +328,13 @@ def relu_net(W, x, B):
     assert len(W) == len(B)
     assert x.outdim == W[0].T.shape[1]
 
-    # one-dimensional zero
+    # one-dimensional zero for all layers
     zero1 = zero_from(x, dim=1)
     assert zero1.outdim == 1
 
     prev_layer = x
     for i in range(len(W)):
+        # grab a single layer
         w = W[i].T
         b = B[i]
     
