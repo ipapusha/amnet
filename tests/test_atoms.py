@@ -158,10 +158,17 @@ class TestAtoms(unittest.TestCase):
             xyzwv = np.array([xv, yv, zv, wv])
             r = phi_relu_aff.eval(xyzwv) # 4-d relu_aff of x
             s = true_relu_aff.eval(xyzwv)
-            self.assertTrue(len(r) == 4)
-            self.assertTrue(len(s) == 4)
-            self.assertTrue(all(r == s))
-            self.assertListEqual(r.tolist(), s.tolist())
+
+            # ip: floating point values may differ, test using norm(..) instead
+            # self.assertTrue(len(r) == 4)
+            # self.assertTrue(len(s) == 4)
+            # self.assertTrue(all(r == s))
+            # self.assertListEqual(r.tolist(), s.tolist())
+            self.assertTrue(r.shape == (4,))
+            self.assertTrue(s.shape == (4,))
+            self.assertAlmostEqual(norm(r - s), 0)
+
+
 
     def test_max2_min2(self):
         xy = amnet.Variable(6, name='xy')
