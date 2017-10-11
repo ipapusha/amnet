@@ -11,7 +11,8 @@ def pca(A, dim):
     M = (A-np.mean(A.T,axis=1)).T # subtract the mean (along columns)
 
     # computing eigenvalues and eigenvectors of covariance matrix
-    [latent,coeff] = np.linalg.eig(np.cov(M)) 
+    cov = np.cov(M)
+    [latent,coeff] = np.linalg.eig(cov) 
     coeff = coeff.astype(float) # discard complex part that results from numerical error
 
     idx = np.argsort(latent) # sorting the eigenvalues
@@ -39,7 +40,7 @@ def main():
     train_labels = mnist.train.labels
     train_pca_images = []
 
-    rotation_reduced = pca(mnist.train.images, reduced_dim)
+    rotation_reduced = pca(mnist.train.images[:10000], reduced_dim)
 
     # convert training data to reduced dimension
     for image in mnist.train.images:

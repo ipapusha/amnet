@@ -35,19 +35,12 @@ def relu_amn(weights, biases):
         if i > 0:
             assert(weights[i].shape[0] == weights[i-1].shape[1])
         assert(weights[i].shape[1] == biases[i].shape[0])
-
-    # get topology of network
-    dimensions = [weight.shape[0] for weight in weights]
-    num_layers = len(dimensions)
     
     # define the input layer for the amnet
-    input_vars = amnet.Variable(dimensions[0])
-    prev_layer_vars = input_vars
+    input_vars = amnet.Variable(weights[0].shape[0])
 
-    # compose each layer
-    for n in range(num_layers):
-        affine_edges = amnet.Affine(np.transpose(weights[n]), prev_layer_vars, biases[n])
-        prev_layer_vars = atoms.relu(affine_edges)
+    # generate network
+    network = atoms.relu_net(weights, input_vars, biases)
 
     # return full construction
-    return prev_layer_vars
+    return network

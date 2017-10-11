@@ -292,6 +292,72 @@ def relu(phi):
 
     return from_list(outlist)
 
+def relu_aff(w, x, b):
+    """
+    low-level implementation of relu(Affine(w, x, b))
+    """
+    
+    assert w.ndim == 2
+    assert x.outdim == w.shape[1]
+    assert len(b) == w.shape[0]
+
+    # one-dimensional zero
+    zero1 = zero_from(x, dim=1)
+    assert zero1.outdim == 1
+
+    # use the idea that max(x, 0) == mu(0, x, x)
+    # go component-by-component
+    outlist = []
+    for i in range(w.shape[0]):
+        xi = amnet.Affine(np.array([w[i]]), x, [b[i]])
+        outlist.append(amnet.Mu(
+            zero1,
+            xi,
+            xi
+        ))
+
+    assert len(outlist) == w.shape[0]
+
+    return from_list(outlist)
+
+def relu_net(W, x, B):
+    """
+    low-level implementation of relu network
+    """
+
+    assert len(W) == len(B)
+    assert x.outdim == W[0].T.shape[1]
+
+    # one-dimensional zero
+    zero1 = zero_from(x, dim=1)
+    assert zero1.outdim == 1
+
+    prev_layer = x
+    for i in range(len(W)):
+        w = W[i].T
+        b = B[i]
+    
+        assert w.ndim == 2
+        assert prev_layer.outdim == w.shape[1]
+        assert len(b) == w.shape[0]
+
+        # use the idea that max(x, 0) == mu(0, x, x)
+        # go component-by-component
+        outlist = []
+        for i in range(w.shape[0]):
+            xi = amnet.Affine(np.array([w[i]]), prev_layer, [b[i]])
+            outlist.append(amnet.Mu(
+                zero1,
+                xi,
+                xi
+            ))
+
+        prev_layer = from_list(outlist)
+
+        assert prev_layer.outdim == w.shape[0]
+
+    return prev_layer
+
 
 def pos_part(phi):
     """
