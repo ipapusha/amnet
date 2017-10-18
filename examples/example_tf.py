@@ -76,7 +76,6 @@ def main():
     # calculate the hidden layer output - in this case, let's use a softmax activated
     # output layer
     y_ = tf.nn.softmax(tf.add(tf.matmul(hidden_out, w2), b2))
-    y_relu = tf.nn.relu(tf.add(tf.matmul(hidden_out, w2), b2))
 
     # now let's define the cost function which we are going to train the model on
     y_clipped = tf.clip_by_value(y_, 1e-10, 0.9999999)

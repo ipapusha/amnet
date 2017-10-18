@@ -75,7 +75,7 @@ def main():
     y_ = tf.nn.softmax(tf.add(tf.matmul(hidden_out, w2), b2))
 
     # need to save raw relu output to compare to amnet output
-    y_relu = tf.nn.relu(tf.add(tf.matmul(hidden_out, w2), b2))
+    y_raw = tf.add(tf.matmul(hidden_out, w2), b2)
 
     # now let's define the cost function which we are going to train the model on
     y_clipped = tf.clip_by_value(y_, 1e-10, 0.9999999)
@@ -114,7 +114,7 @@ def main():
         print(sess.run(accuracy, feed_dict={x: test_pca_images, y: test_labels}))
 
         # grab non regularized output to compare to amnet
-        tf_predictions = y_relu.eval(feed_dict={x: test_pca_images}, session=sess)
+        tf_predictions = y_raw.eval(feed_dict={x: test_pca_images}, session=sess)
 
         weights, biass = tf_utils.get_vars(tf.trainable_variables(), sess)
 
