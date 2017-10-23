@@ -117,6 +117,8 @@ class TestSmt(unittest.TestCase):
             # construct amnet
             relu_nn = tf_utils.relu_amn(weights, biases)
 
+            if VISUALIZE: amnet.vis.quick_vis(phi=relu_nn, title='relu_nn')
+
             self.validate_outputs(
                 phi=relu_nn,
                 onvals=itertools.product(self.floatvals, repeat=relu_nn.indim),
