@@ -345,14 +345,20 @@ def relu_net(W, x, B):
         # use the idea that max(x, 0) == mu(0, x, x)
         # go component-by-component
         outlist = []
-        for i in range(w.shape[0]):
-            xi = amnet.Affine(np.array([w[i]]), prev_layer, [b[i]])
-            outlist.append(amnet.Mu(
-                zero1,
-                xi,
-                xi
-            ))
+        for j in range(w.shape[0]):
+            xi = amnet.Affine(np.array([w[j]]), prev_layer, [b[j]])
+            # don't add relu node for output
+            if i == len(W) - 1:
+                outlist.append(xi)
+            else:
+                # relu node
+                outlist.append(amnet.Mu(
+                    zero1,
+                    xi,
+                    xi
+                ))
 
+        # stack nodes
         prev_layer = from_list(outlist)
 
         assert prev_layer.outdim == w.shape[0]
