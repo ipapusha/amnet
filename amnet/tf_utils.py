@@ -44,3 +44,16 @@ def relu_amn(weights, biases):
 
     # return full construction
     return network
+
+def sat_amn(weights,biases):
+    # ensure that the construction makes sense
+    assert(len(weights)==len(biases))
+    for i in range(len(weights)):
+        if i>0:
+            assert(weights[i].shape[0] == weights[i-1].shape[1])
+        assert(weights[i].shape[1] == biases[i].shape[0])
+
+    # define input layer for the amnet
+    input_vars = amnet.Variable(weights[0].shape[0])
+    network = atoms.sat_net(weights,input_vars,biases)
+    return network
