@@ -147,10 +147,6 @@ def main():
     num_perts = 80
     perturbation = z3.RealVector('perturbation', num_perts)
 
-    # add perturbation range constraint
-    for var in perturbation:
-        stream.solver.add(var < 1.0, var > -1.0)
-
     # take random index instead of just first n
     random_inds = random.sample(range(784), num_perts)
     j = 0
