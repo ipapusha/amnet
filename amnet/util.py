@@ -73,6 +73,7 @@ def allsame(xs):
 def is_nonempty_vector_z3(xs):
     return (len(xs) >= 1) and all([z3.is_expr(x) for x in xs])
 
+
 def max2_z3(x, y):
     assert z3.is_expr(x)
     assert z3.is_expr(y)
@@ -109,6 +110,7 @@ def normLinf_z3(xs):
     assert is_nonempty_vector_z3(xs)
     return maxN_z3([abs_z3(x) for x in xs])
 
+
 # matrix-vector operations
 def gaxpy_z3(A, xs, ys=None, skip_zeros=True):
     assert is_nonempty_vector_z3(xs)
@@ -131,9 +133,10 @@ def gaxpy_z3(A, xs, ys=None, skip_zeros=True):
         assert len(A[i]) == n
         if skip_zeros:
             rowsum = z3.Sum([Aij * xj
-                             for Aij, x in izip(A[i], xs)
+                             for Aij, xj in izip(A[i], xs)
                              if Aij != 0])
         else:
             rowsum = z3.Sum([Aij * xj
-                             for Aij, x in izip(A[i], xs)])
+                             for Aij, xj in izip(A[i], xs)])
+
         output[i] = rowsum + ys[i] if ys else rowsum
