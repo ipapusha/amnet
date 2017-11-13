@@ -1,8 +1,12 @@
 from __future__ import division
 import z3
+from itertools import izip
 from fractions import Fraction
 
 
+################################################################################
+# general utilities
+################################################################################
 
 def r2f(r):
     """ converts z3 rational to a python float,
@@ -60,3 +64,76 @@ def allsame(xs):
         return True
 
     return all([x == xs[0] for x in xs[1:]])
+
+
+################################################################################
+# useful functions for z3 variables
+################################################################################
+
+def is_nonempty_vector_z3(xs):
+    return (len(xs) >= 1) and all([z3.is_expr(x) for x in xs])
+
+def max2_z3(x, y):
+    assert z3.is_expr(x)
+    assert z3.is_expr(y)
+    return z3.If(x <= y, y, x)
+
+
+def min2_z3(x, y):
+    assert z3.is_expr(x)
+    assert z3.is_expr(y)
+    return z3.If(x <= y, x, y)
+
+
+def maxN_z3(xs):
+    assert is_nonempty_vector_z3(xs)
+    return foldl(max2_z3, xs[0], xs[1:])
+
+
+def minN_z3(xs):
+    assert is_nonempty_vector_z3(xs)
+    return foldl(min2_z3, xs[0], xs[1:])
+
+
+def abs_z3(x):
+    assert z3.is_expr(x)
+    return max2_z3(x, -x)
+
+
+def normL1_z3(xs):
+    assert is_nonempty_vector_z3(xs)
+    return z3.Sum([abs_z3(x) for x in xs])
+
+
+def normLinf_z3(xs):
+    assert is_nonempty_vector_z3(xs)
+    return maxN_z3([abs_z3(x) for x in xs])
+
+# matrix-vector operations
+def gaxpy_z3(A, xs, ys=None, skip_zeros=True):
+    assert is_nonempty_vector_z3(xs)
+
+    # extract dimensions
+    n = len(xs)
+    m = len(A)
+
+    # do dimension-checking
+    assert m >= 1
+    assert n >= 1
+    if ys:
+        assert len(ys) == m
+    assert all([len(row) == n for row in A])
+
+    # encode matrix-multiply
+    output = [None] * m
+
+    for i in range(m):
+        assert len(A[i]) == n
+        if skip_zeros:
+            rowsum = z3.Sum([Aij * xj
+                             for Aij, x in izip(A[i], xs)
+                             if Aij != 0])
+        else:
+            rowsum = z3.Sum([Aij * xj
+                             for Aij, x in izip(A[i], xs)])
+        output[i] = rowsum + ys[i] if ys else rowsum
