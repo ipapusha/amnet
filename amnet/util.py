@@ -101,12 +101,12 @@ def abs_z3(x):
     return max2_z3(x, -x)
 
 
-def normL1_z3(xs):
+def norm1_z3(xs):
     assert is_nonempty_vector_z3(xs)
     return z3.Sum([abs_z3(x) for x in xs])
 
 
-def normLinf_z3(xs):
+def norminf_z3(xs):
     assert is_nonempty_vector_z3(xs)
     return maxN_z3([abs_z3(x) for x in xs])
 
@@ -122,7 +122,7 @@ def gaxpy_z3(A, xs, ys=None, skip_zeros=True):
     # do dimension-checking
     assert m >= 1
     assert n >= 1
-    if ys:
+    if ys is not None:
         assert len(ys) == m
     assert all([len(row) == n for row in A])
 
@@ -139,4 +139,6 @@ def gaxpy_z3(A, xs, ys=None, skip_zeros=True):
             rowsum = z3.Sum([Aij * xj
                              for Aij, xj in izip(A[i], xs)])
 
-        output[i] = rowsum + ys[i] if ys else rowsum
+        output[i] = rowsum + ys[i] if ys is not None else rowsum
+
+    return output
