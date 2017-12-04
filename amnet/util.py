@@ -1,4 +1,5 @@
 from __future__ import division
+import numpy as np
 import z3
 from itertools import izip
 from fractions import Fraction
@@ -26,6 +27,11 @@ def mfp(model, var):
         or 0.0 if var is not in model
     """
     return r2f(model.eval(var, model_completion=True))
+
+
+def mfpv(model, var_vector):
+    """ vector version of mfp """
+    return np.array([mfp(model, v) for v in var_vector])
 
 
 def foldl(f, z, xs):
@@ -69,6 +75,40 @@ def allsame(xs):
 ################################################################################
 # useful functions for z3 variables
 ################################################################################
+
+def eqv_z3(solver, var, arr):
+    """adds the constraints {var[i] == arr[i], i = 1..n} to solver """
+    assert len(var) == len(arr)
+    for v_i, arr_i in izip(var, arr):
+        solver.add(v_i == arr_i)
+
+
+def leqv_z3(solver, var, arr):
+    """adds the constraints {var[i] <= arr[i], i = 1..n} to solver """
+    assert len(var) == len(arr)
+    for v_i, arr_i in izip(var, arr):
+        solver.add(v_i <= arr_i)
+
+
+def ltv_z3(solver, var, arr):
+    """adds the constraints {var[i] < arr[i], i = 1..n} to solver """
+    assert len(var) == len(arr)
+    for v_i, arr_i in izip(var, arr):
+        solver.add(v_i < arr_i)
+
+
+def geqv_z3(solver, var, arr):
+    """adds the constraints {var[i] >= arr[i], i = 1..n} to solver """
+    assert len(var) == len(arr)
+    for v_i, arr_i in izip(var, arr):
+        solver.add(v_i >= arr_i)
+
+def gtv_z3(solver, var, arr):
+    """adds the constraints {var[i] > arr[i], i = 1..n} to solver """
+    assert len(var) == len(arr)
+    for v_i, arr_i in izip(var, arr):
+        solver.add(v_i > arr_i)
+
 
 def is_nonempty_vector_z3(xs):
     return (len(xs) >= 1) and all([z3.is_expr(x) for x in xs])

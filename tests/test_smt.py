@@ -954,8 +954,9 @@ class TestSmt(unittest.TestCase):
         self.assertEqual(len(phi_y_out), 1)
         self.assertEqual(len(z_in), 2)
 
-        solver.add(z_in[0] == phi_x_out[0])
-        solver.add(z_in[1] == phi_y_out[0])
+        # solver.add(z_in[0] == phi_x_out[0])
+        # solver.add(z_in[1] == phi_y_out[0])
+        amnet.util.eqv_z3(solver, z_in, [phi_x_out[0], phi_y_out[0]])
 
         #print "Linked solver:", solver
 
@@ -971,14 +972,16 @@ class TestSmt(unittest.TestCase):
         # do some test cases
         def do_testcase(xf, yf, fpeval):
             solver.push()
-            #print "Pre-input solver:", solver
-            for i in range(len(xf)):
-                #print 'Adding input constraint: a==b, (a, b):', (x_in[i], xf[i])
-                solver.add(x_in[i] == xf[i])
-            for i in range(len(yf)):
-                #print 'Adding input constraint: a==b, (a, b):', ( y_in[i], yf[i])
-                solver.add(y_in[i] == yf[i])
-            #print "Post-input solver:", solver
+            # #print "Pre-input solver:", solver
+            # for i in range(len(xf)):
+            #     #print 'Adding input constraint: a==b, (a, b):', (x_in[i], xf[i])
+            #     solver.add(x_in[i] == xf[i])
+            # for i in range(len(yf)):
+            #     #print 'Adding input constraint: a==b, (a, b):', ( y_in[i], yf[i])
+            #     solver.add(y_in[i] == yf[i])
+            # #print "Post-input solver:", solver
+            amnet.util.eqv_z3(solver, x_in, xf)
+            amnet.util.eqv_z3(solver, y_in, yf)
 
             # check for sat
             result = solver.check()
@@ -987,7 +990,7 @@ class TestSmt(unittest.TestCase):
 
             # extract the output
             model = solver.model()
-            smteval = np.array([amnet.util.mfp(model, v) for v in phi_z_out])
+            smteval = amnet.util.mfpv(model, phi_z_out)
             #print smteval
 
             # check that the outputs match
