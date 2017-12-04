@@ -32,6 +32,36 @@ class NamingContext(object):
         else:
             assert False
 
+    @classmethod
+    def multiple_contexts_for(cls, phi_list):
+        """
+        Returns a list of NamingContext instances corresponding to the phi_list,
+        making sure that each context is name-compatible with every other.
+
+        This method is used to assign unique names to the internal nodes of multiple
+        AMN instances, which allows for them to coexist without name clashing
+        within the same solver instance.
+
+        Example:
+            ctx_list = NamingContext.multiple_contexts_for([phi, psi])
+            => ctx_list[0] is a NamingContext for phi
+            => ctx_list[1] is a NamingContext for psi
+        """
+        ctx_list = []
+        for phi in phi_list:
+            # create a NamingContext for the current phi,
+            # taking into account the already-created contexts
+            if len(ctx_list) == 0:
+                ctx = cls(phi=phi, other_ctxs=None)      # first iteration
+            else:
+                ctx = cls(phi=phi, other_ctxs=ctx_list)  # subsequent iterations
+
+            # append the created NamingContext to the retval
+            ctx_list.append(ctx)
+
+        assert len(ctx_list) == len(phi_list)
+        return ctx_list
+
     def is_valid(self):
         """
         Checks that the symbol table has a valid inverse
@@ -60,37 +90,43 @@ class NamingContext(object):
 
         return vars_seen == 1
 
-    def __init__(self, phi=None):
+    def __init__(self, phi=None, other_ctxs=None):
         self.symbols = dict()
 
         # does not touch the tree, only recursively
         # assigns names to the tree rooted at phi
         if phi is not None:
-            self.assign_names(phi)
+            self.assign_names(phi, other_ctxs)
 
     def prefix_names(self, prefix):
         """
         Get all existing names for a given prefix
+        within the current context
         """
-        # all names beginning with the given prefix
         return [name
                 for name in self.symbols.keys()
                 if name.startswith(prefix)]
 
-    def next_unique_name(self, prefix):
+    def next_unique_name(self, prefix, other_ctxs=None):
         """
         Generate a unique name for a given prefix 
         """
-        # if there are no existing variables return new varname
+        # prefix names within current context
         pnames = self.prefix_names(prefix)
+
+        # add prefix names from other_ctxs, if they exist,
+        # to ensure unique names across multiple NamingContexts
+        if other_ctxs is not None:
+            for other_ctx in other_ctxs:
+                pnames.extend(other_ctx.prefix_names(prefix))
+
+        # if there are no existing variables return new varname
         if len(pnames) == 0:
             retval = prefix + '0'
             assert retval not in self.symbols, 'bad prefix'
             return retval
 
         # otherwise, return 1 + largest value in the names
-        #pnums = [int(name[len(prefix):]) for name in pnames]
-        #maxnum = max(pnums)
         pnums = []
         for name in pnames:
             suffix = name[len(prefix):]
@@ -129,7 +165,7 @@ class NamingContext(object):
 
         return None
 
-    def assign_name(self, phi):
+    def assign_name(self, phi, other_ctxs=None):
         """
         Assigns a name to phi (and only phi), 
         provided it does not already have a name
@@ -139,33 +175,36 @@ class NamingContext(object):
 
         if not visited:
             # get a unique name
-            name = self.next_unique_name(prefix=NamingContext.default_prefix_for(phi))
+            name = self.next_unique_name(
+                prefix=NamingContext.default_prefix_for(phi),
+                other_ctxs=other_ctxs
+            )
 
             # assign the name
             self.symbols[name] = phi
 
         return visited
 
-    def assign_names(self, phi):
+    def assign_names(self, phi, other_ctxs=None):
         """
         Recursively walks the tree for phi,
         and assigns a name to each node
         """
-        visited = self.assign_name(phi)
+        visited = self.assign_name(phi, other_ctxs)
 
         if visited:
             #print 'Found a previously visited node (%s)' % self.name_of(phi),
             return
 
         if hasattr(phi, 'x'):
-            self.assign_names(phi.x)
+            self.assign_names(phi.x, other_ctxs)
         if hasattr(phi, 'y'):
             assert isinstance(phi, amnet.Mu) or \
                    isinstance(phi, amnet.Stack)
-            self.assign_names(phi.y)
+            self.assign_names(phi.y, other_ctxs)
         if hasattr(phi, 'z'):
             assert isinstance(phi, amnet.Mu)
-            self.assign_names(phi.z)
+            self.assign_names(phi.z, other_ctxs)
 
     def signal_graph(self):
         """
@@ -186,7 +225,7 @@ class NamingContext(object):
 
         return sg
 
-    def rename(self, phi, newname):
+    def rename(self, phi, newname, other_ctxs=None):
         oldname = self.name_of(phi)
         assert oldname is not None, 'nothing to rename'
         assert newname and newname[0].isalpha(), 'invalid new name'
@@ -198,7 +237,8 @@ class NamingContext(object):
         if newname in self.symbols:
             phi2 = self.symbols[newname]
             name2 = self.next_unique_name(
-                prefix=NamingContext.default_prefix_for(phi2)
+                prefix=NamingContext.default_prefix_for(phi2),
+                other_ctxs=other_ctxs
             )
             print 'Warning (rename): %s exists within context, moving existing symbol to %s' % \
                   (newname, name2)
@@ -211,41 +251,42 @@ class NamingContext(object):
         # maintain invariant
         assert self.is_valid()
 
-    def merge_ctx(self, other_ctx):
-        """
-        Merges another naming context into the current context, keeping the
-        same names if possible. 
-        Renames the symbols from the other context when necessary.
-        """
-        assert self.is_valid()
-
-        # for asserts
-        nodes_premerge = len(self.symbols)
-        nodes_added = 0
-
-        for other_name, other_phi in other_ctx.symbols.items():
-            here_name = self.name_of(other_phi)
-            if here_name is None:
-                # other node is not in current ctx,
-                # try to keep the same name
-                if other_name not in self.symbols:
-                    self.symbols[other_name] = other_phi
-                else:
-                    other_name2 = self.next_unique_name(
-                        prefix=NamingContext.default_prefix_for(other_phi)
-                    )
-                    self.symbols[other_name2] = other_phi
-
-                nodes_added += 1
-            else:
-                # node already in current context, keep it
-                print 'Warning (merge): %s already in destination context as %s' % \
-                      (k, vname)
-
-        # keep invariant
-        nodes_postmerge = len(self.symbols)
-        assert nodes_postmerge == nodes_premerge + nodes_added
-        assert self.is_valid()
+    # def merge_ctx(self, other_ctx, other_ctxs=None):
+    #     """
+    #     Merges another naming context into the current context, keeping the
+    #     same names if possible.
+    #     Renames the symbols from the other context when necessary.
+    #     """
+    #     assert self.is_valid()
+    #
+    #     # for asserts
+    #     nodes_premerge = len(self.symbols)
+    #     nodes_added = 0
+    #
+    #     for other_name, other_phi in other_ctx.symbols.items():
+    #         here_name = self.name_of(other_phi)
+    #         if here_name is None:
+    #             # other node is not in current ctx,
+    #             # try to keep the same name
+    #             if other_name not in self.symbols:
+    #                 self.symbols[other_name] = other_phi
+    #             else:
+    #                 other_name2 = self.next_unique_name(
+    #                     prefix=NamingContext.default_prefix_for(other_phi),
+    #                     other_ctxs=other_ctxs
+    #                 )
+    #                 self.symbols[other_name2] = other_phi
+    #
+    #             nodes_added += 1
+    #         else:
+    #             # node already in current context, keep it
+    #             print 'Warning (merge): %s already in destination context as %s' % \
+    #                   (k, vname)
+    #
+    #     # keep invariant
+    #     nodes_postmerge = len(self.symbols)
+    #     assert nodes_postmerge == nodes_premerge + nodes_added
+    #     assert self.is_valid()
 
 
 class SmtEncoder(object):

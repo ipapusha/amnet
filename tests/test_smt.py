@@ -1,6 +1,5 @@
 import numpy as np
 import amnet
-import amnet.vis
 
 import z3
 
@@ -10,7 +9,11 @@ import sys
 import unittest
 import itertools
 
-VISUALIZE = True
+VISUALIZE = True  # output graphviz drawings
+VERBOSE = True    # output debugging print statements
+
+if VISUALIZE:
+    import amnet.vis
 
 class TestSmt(unittest.TestCase):
     @classmethod
@@ -897,6 +900,28 @@ class TestSmt(unittest.TestCase):
             onvals=itertools.product(self.floatvals2, repeat=phi_vgc2.indim),
             true_f=lambda xi: true_phase_vgc(xi, alpha=alpha2)
         )
+
+    def test_NamingContext_multiple_contexts_for(self):
+        x = amnet.Variable(2, name='x')
+        y = amnet.Variable(3, name='y')
+
+        phi_x = amnet.atoms.max_all(x)
+        phi_y = amnet.atoms.max_all(y)
+
+        # multiple context names
+        ctx_list = amnet.smt.NamingContext.multiple_contexts_for([phi_x, phi_y])
+        self.assertEqual(len(ctx_list), 2)
+
+        # make sure all names are unique
+        names = []
+        for ctx in ctx_list:
+            names.extend(ctx.symbols.keys())
+        # print names
+        self.assertEqual(len(names), len(set(names)))
+
+        if VISUALIZE:
+            amnet.vis.quick_vis(phi_x, title='multiple_contexts_phi_x', ctx=ctx_list[0])
+            amnet.vis.quick_vis(phi_y, title='multiple_contexts_phi_y', ctx=ctx_list[1])
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)
