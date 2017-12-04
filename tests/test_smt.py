@@ -972,16 +972,10 @@ class TestSmt(unittest.TestCase):
         # do some test cases
         def do_testcase(xf, yf, fpeval):
             solver.push()
-            # #print "Pre-input solver:", solver
-            # for i in range(len(xf)):
-            #     #print 'Adding input constraint: a==b, (a, b):', (x_in[i], xf[i])
-            #     solver.add(x_in[i] == xf[i])
-            # for i in range(len(yf)):
-            #     #print 'Adding input constraint: a==b, (a, b):', ( y_in[i], yf[i])
-            #     solver.add(y_in[i] == yf[i])
-            # #print "Post-input solver:", solver
+            #print "Pre-input solver:", solver
             amnet.util.eqv_z3(solver, x_in, xf)
             amnet.util.eqv_z3(solver, y_in, yf)
+            #print "Post-input solver:", solver
 
             # check for sat
             result = solver.check()
