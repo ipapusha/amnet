@@ -290,6 +290,45 @@ class NamingContext(object):
 
 
 class SmtEncoder(object):
+    @classmethod
+    def multiple_encoders_for(cls, phi_list, solver=None, push_between=True):
+        """
+        Returns a list of SmtEncoder instances corresponding to the phi_list,
+        making sure that
+            1. a default solver is created, if necessary
+            2. each encoder contains a reference to the same (possibly default) solver
+            3. each encoder contains a reference to a unique ctx for that phi
+            4. if push_between is true, solver.push() is called between each phi
+        """
+        # initialize a common SMT solver, if needed
+        if solver is None:
+            solver = z3.Solver()
+
+        # encode from multi context
+        ctx_list = NamingContext.multiple_contexts_for(phi_list)
+        enc_list = []
+        for ctx in ctx_list:
+            enc = cls(ctx=ctx, solver=solver)
+            enc_list.append(enc)
+            if push_between:
+                solver.push()
+
+        # all encoders contain a reference to the same solver
+        assert len(phi_list) == len(enc_list)
+        return enc_list
+
+    @classmethod
+    def multiple_encode(cls, *args):
+        """
+        Convenience method for default from-AMN encoding of multiple AMN references
+        Example:
+             enc1, enc2, ... = SmtEncoder.multiple_encode(phi1, phi2, ...)
+        """
+        # TODO: add functionality that allows incrementally adding AMN nodes.
+        assert len(args) >= 2, 'multiple_encode(*args) called unnecessarily'
+        enc_list = cls.multiple_encoders_for(list(args))
+        return enc_list
+
     def __init__(self, phi=None, ctx=None, solver=None):
         # initialize new SMT solver if needed
         if solver is None:

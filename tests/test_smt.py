@@ -10,10 +10,10 @@ import unittest
 import itertools
 
 VISUALIZE = True  # output graphviz drawings
-VERBOSE = True    # output debugging print statements
 
 if VISUALIZE:
     import amnet.vis
+
 
 class TestSmt(unittest.TestCase):
     @classmethod
@@ -916,12 +916,109 @@ class TestSmt(unittest.TestCase):
         names = []
         for ctx in ctx_list:
             names.extend(ctx.symbols.keys())
-        # print names
         self.assertEqual(len(names), len(set(names)))
 
         if VISUALIZE:
             amnet.vis.quick_vis(phi_x, title='multiple_contexts_phi_x', ctx=ctx_list[0])
             amnet.vis.quick_vis(phi_y, title='multiple_contexts_phi_y', ctx=ctx_list[1])
+
+    def test_SmtEncoder_multiple_encode(self):
+        x = amnet.Variable(2, name='x')
+        y = amnet.Variable(3, name='y')
+        z = amnet.Variable(2, name='z')
+
+        phi_x = amnet.atoms.max_all(x)
+        phi_y = amnet.atoms.max_all(y)
+        phi_z = amnet.atoms.max_all(z)
+
+        # encode the AMNs
+        enc_x, enc_y, enc_z = amnet.smt.SmtEncoder.multiple_encode(phi_x, phi_y, phi_z)
+        solver = enc_x.solver
+
+        if VISUALIZE:
+            amnet.vis.quick_vis(phi_x, title='multiple_encode_phi_x', ctx=enc_x.ctx)
+            amnet.vis.quick_vis(phi_y, title='multiple_encode_phi_y', ctx=enc_y.ctx)
+            amnet.vis.quick_vis(phi_z, title='multiple_encode_phi_z', ctx=enc_z.ctx)
+
+        # make sure solver object is the same
+        self.assertTrue(enc_x.solver is solver)
+        self.assertTrue(enc_y.solver is solver)
+        self.assertTrue(enc_z.solver is solver)
+
+        # link the outputs of x and y to the inputs of z
+        phi_x_out = enc_x.var_of(phi_x)
+        phi_y_out = enc_y.var_of(phi_y)
+        z_in = enc_z.var_of_input()
+
+        self.assertEqual(len(phi_x_out), 1)
+        self.assertEqual(len(phi_y_out), 1)
+        self.assertEqual(len(z_in), 2)
+
+        solver.add(z_in[0] == phi_x_out[0])
+        solver.add(z_in[1] == phi_y_out[0])
+
+        #print "Linked solver:", solver
+
+        # input variables to the linked network
+        x_in = enc_x.var_of_input()
+        y_in = enc_y.var_of_input()
+        phi_z_out = enc_z.var_of(phi_z)
+
+        self.assertEqual(len(x_in), 2)
+        self.assertEqual(len(y_in), 3)
+        self.assertEqual(len(phi_z_out), 1)
+
+        # do some test cases
+        def do_testcase(xf, yf, fpeval):
+            solver.push()
+            #print "Pre-input solver:", solver
+            for i in range(len(xf)):
+                #print 'Adding input constraint: a==b, (a, b):', (x_in[i], xf[i])
+                solver.add(x_in[i] == xf[i])
+            for i in range(len(yf)):
+                #print 'Adding input constraint: a==b, (a, b):', ( y_in[i], yf[i])
+                solver.add(y_in[i] == yf[i])
+            #print "Post-input solver:", solver
+
+            # check for sat
+            result = solver.check()
+            self.assertTrue(result == z3.sat)
+            self.assertFalse(result == z3.unsat)
+
+            # extract the output
+            model = solver.model()
+            smteval = np.array([amnet.util.mfp(model, v) for v in phi_z_out])
+            #print smteval
+
+            # check that the outputs match
+            self.assertAlmostEqual(norm(smteval - fpeval), 0)
+            solver.pop()
+
+        do_testcase(
+            xf=np.array([1, 0]),
+            yf=np.array([-1, -4, 0]),
+            fpeval=np.array([1])
+        )
+        do_testcase(
+            xf=np.array([1, 4.1]),
+            yf=np.array([-1, 4.1, 0]),
+            fpeval=np.array([4.1])
+        )
+        do_testcase(
+            xf = np.array([-1, 0]),
+            yf = np.array([3, -4, 5]),
+            fpeval = np.array([5])
+        )
+        do_testcase(
+            xf=np.array([-1, 0]),
+            yf=np.array([3, 20, 5]),
+            fpeval=np.array([20])
+        )
+        do_testcase(
+            xf=np.array([-1, -17.1]),
+            yf=np.array([0, -4, -5]),
+            fpeval=np.array([0])
+        )
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSmt)
