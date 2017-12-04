@@ -250,44 +250,7 @@ class NamingContext(object):
 
         # maintain invariant
         assert self.is_valid()
-
-    # def merge_ctx(self, other_ctx, other_ctxs=None):
-    #     """
-    #     Merges another naming context into the current context, keeping the
-    #     same names if possible.
-    #     Renames the symbols from the other context when necessary.
-    #     """
-    #     assert self.is_valid()
-    #
-    #     # for asserts
-    #     nodes_premerge = len(self.symbols)
-    #     nodes_added = 0
-    #
-    #     for other_name, other_phi in other_ctx.symbols.items():
-    #         here_name = self.name_of(other_phi)
-    #         if here_name is None:
-    #             # other node is not in current ctx,
-    #             # try to keep the same name
-    #             if other_name not in self.symbols:
-    #                 self.symbols[other_name] = other_phi
-    #             else:
-    #                 other_name2 = self.next_unique_name(
-    #                     prefix=NamingContext.default_prefix_for(other_phi),
-    #                     other_ctxs=other_ctxs
-    #                 )
-    #                 self.symbols[other_name2] = other_phi
-    #
-    #             nodes_added += 1
-    #         else:
-    #             # node already in current context, keep it
-    #             print 'Warning (merge): %s already in destination context as %s' % \
-    #                   (k, vname)
-    #
-    #     # keep invariant
-    #     nodes_postmerge = len(self.symbols)
-    #     assert nodes_postmerge == nodes_premerge + nodes_added
-    #     assert self.is_valid()
-
+        
 
 class SmtEncoder(object):
     @classmethod
