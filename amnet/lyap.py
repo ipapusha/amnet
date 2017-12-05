@@ -8,6 +8,104 @@ import cvxpy
 import itertools
 
 
+class VerificationResult(object):
+    # possible flags for result of a verification problem
+    SUCCESS = 1
+    FAIL = 2
+    FAIL_WITH_COUNTEREXAMPLE = 3
+
+    # constructor
+    def __init__(self, code):
+        self.code = code
+
+
+def verify_forward_invariance(f, V):
+    """
+    For the discrete-time system x(t+1) = f(x(t)),
+    define the set S = {x | V(x) <= 0}.
+
+    Both f and V are Amn instances.
+
+    This method checks the forward invariance condition
+    once in S, always in S:
+    forall x . (x in S) -> (f(x) in S)
+    """
+    # make sure dimensions work out
+    n = f.outdim
+    assert n >= 1
+    assert f.indim == n and f.outdim == n
+    assert V.indim == n and V.outdim == 1
+
+    # encode the two Amns
+    enc_f, enc_V1, enc_V2 = amnet.smt.SmtEncoder.multiple_encode(f, V, V)
+    solver = enc_f.solver
+    assert solver is enc_f.solver
+    assert solver is enc_V1.solver
+    assert solver is enc_V2.solver
+
+    # variables associated with inputs and outputs of the two Amns
+    x  = enc_f.var_of_input()
+    xp = enc_f.var_of(f)
+    x1 = enc_V1.var_of_input()
+    x2 = enc_V2.var_of_input()
+    Vx1 = enc_V1.var_of(V)
+    Vx2 = enc_V2.var_of(V)
+
+    # negative of forward invariance condition:
+    # not(forall x . (x in S) -> (f(x) in S))
+    # == exists x . (x in S) and not(f(x) in S)
+    # == exists x, xp, x1, x2 .
+    # (xp = f(x)) and (V(x1) <= 0) and (x1 = x)
+    #             and (V(x2) > 0) and (x2 = xp)
+    amnet.util.leqv_z3(solver, Vx1, np.array([0.0]))
+    amnet.util.eqv_z3(solver, x1, x)
+    amnet.util.gtv_z3(solver, Vx2, np.array([0.0]))
+    amnet.util.eqv_z3(solver, x2, xp)
+
+    # call the solver
+    result = solver.check()
+
+    # no counterexample found
+    if result == z3.unsat:
+        return VerificationResult(VerificationResult.SUCCESS)
+
+    # counterexample found, extract model
+    assert result == z3.sat
+    model = solver.model()
+    retval = VerificationResult(VerificationResult.FAIL_WITH_COUNTEREXAMPLE)
+    retval.x = amnet.util.mfpv(model, x)
+    retval.xp = amnet.util.mfpv(model, xp)
+    return retval
+
+
+def verify_stability(phi, V, reg=None):
+    """
+    Proves that a Lyapunov function candidate V is a certificate
+    for stability of the origin in the region reg, or return a
+    counterexample if V does not certify stability.
+
+    Dynamical system: x(t+1) = phi(x(t)) (Amn)
+    Lyapunov function candidate: V(x) (Amn)
+    Region: reg (AmnRegion)
+    """
+    # make sure dimensions work out
+    n = phi.outdim
+    assert n >= 1
+    assert n == phi.indim
+    assert V.outdim == 1
+    assert V.indim == n
+    assert reg.phi.indim == n
+    assert reg.phi.outdim == 1
+
+    # origin
+    x_origin = np.zeros(n)
+
+    # default region is the entire space R^n
+    if reg is None:
+        reg = amnet.region.global_space(x)
+
+    pass
+
 
 
 ################################################################################
