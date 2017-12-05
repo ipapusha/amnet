@@ -292,11 +292,11 @@ def relu(phi):
 
     return from_list(outlist)
 
+
 def relu_aff(w, x, b):
     """
     low-level implementation of relu(Affine(w, x, b))
     """
-    
     assert w.ndim == 2
     assert x.outdim == w.shape[1]
     assert len(b) == w.shape[0]
@@ -320,11 +320,11 @@ def relu_aff(w, x, b):
 
     return from_list(outlist)
 
+
 def relu_net(W, x, B):
     """
     low-level implementation of relu network
     """
-
     assert len(W) == len(B)
     assert x.outdim == W[0].T.shape[1]
 
