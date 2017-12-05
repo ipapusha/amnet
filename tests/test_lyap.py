@@ -45,7 +45,7 @@ class TestLyap(unittest.TestCase):
         z3.set_param('smt.case_split', 5)
         z3.set_param('smt.relevancy', 2)
 
-    def stability_search1(self):
+    def donot_test_stability_search1(self):
         #Ad = self.Ad_osc
         Ad = self.Ad_met
         (n, _) = Ad.shape
@@ -62,10 +62,8 @@ class TestLyap(unittest.TestCase):
         #amnet.lyap.stability_search1(phi, xsys, 10)
         amnet.lyap.stability_search1(phi, xsys, 4)  # enough for Metzler sys
 
-    def cvxpy(self):
-        pass
 
-    def test_disprove_maxaff_local_lyapunov(self):
+    def donot_test_disprove_maxaff_local_lyapunov(self):
         # a simple system
         Ad = self.Ad_diag
         (n, _) = Ad.shape

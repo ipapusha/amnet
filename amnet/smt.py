@@ -250,7 +250,7 @@ class NamingContext(object):
 
         # maintain invariant
         assert self.is_valid()
-        
+
 
 class SmtEncoder(object):
     @classmethod
