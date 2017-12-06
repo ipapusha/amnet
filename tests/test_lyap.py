@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 import scipy as sp
 from scipy.linalg import expm
-from numpy.linalg import eigvals
+from numpy.linalg import eigvals, norm
 
 import amnet
 
@@ -44,6 +44,42 @@ class TestLyap(unittest.TestCase):
         z3.set_param('auto_config', False)
         z3.set_param('smt.case_split', 5)
         z3.set_param('smt.relevancy', 2)
+
+    def test_verify_forward_invariance(self):
+        # generate a known positive system
+        n = 2
+        A = np.array([[1, 2], [3, 4]])
+
+        # dynamics Amn
+        x = amnet.Variable(2, name='x')
+        f = amnet.Linear(A, x)
+
+        # nonnegative orthant Amn
+        # (V(x) <= 0) iff (-min_i x_i <= 0)
+        V = amnet.atoms.negate(
+            amnet.atoms.min_all(
+                x
+            )
+        )
+
+        # should be forward invariant
+        result = amnet.lyap.verify_forward_invariance(f, V)
+        self.assertEqual(result.code, amnet.lyap.VerificationResult.SUCCESS)
+
+        # generate known *not* forward invariant system
+        A2 = np.array([[-1, 2], [3, 4]])
+        f2 = amnet.Linear(A2, x)
+
+        # should get counterexample
+        result = amnet.lyap.verify_forward_invariance(f2, V)
+        self.assertEqual(result.code, amnet.lyap.VerificationResult.FAIL_WITH_COUNTEREXAMPLE)
+        xv = result.x
+        xvp = f2.eval(result.x)
+
+        self.assertAlmostEqual(norm(xvp - result.xp), 0)
+        self.assertLessEqual(V.eval(xv)[0], 0) # start in S
+        self.assertGreater(V.eval(xvp)[0], 0)  # go outside S
+
 
     def donot_test_stability_search1(self):
         #Ad = self.Ad_osc
