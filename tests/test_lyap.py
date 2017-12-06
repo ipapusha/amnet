@@ -51,7 +51,7 @@ class TestLyap(unittest.TestCase):
         A = np.array([[1, 2], [3, 4]])
 
         # dynamics Amn
-        x = amnet.Variable(2, name='x')
+        x = amnet.Variable(n, name='x')
         f = amnet.Linear(A, x)
 
         # nonnegative orthant Amn
@@ -80,6 +80,48 @@ class TestLyap(unittest.TestCase):
         self.assertLessEqual(V.eval(xv)[0], 0) # start in S
         self.assertGreater(V.eval(xvp)[0], 0)  # go outside S
 
+    def test_verify_forward_invariance2(self):
+        # generate a known positive (nonlinear) system
+        n = 2
+        A = np.array([[0.7, -0.1], [0.3, 4]])
+
+        # dynamics Amn
+        # x(t+1) = sat(A*x(t))
+        x = amnet.Variable(n, name='x')
+        f = amnet.atoms.sat(amnet.Linear(A, x))
+
+        # invariant region is L-infinity ball
+        # i.e., 0-sublevel set of the following function:
+        V = amnet.atoms.sub2(
+            amnet.atoms.norminf(x),
+            amnet.Constant(x, np.array([1.0]))
+        )
+
+        # should be forward invariant
+        result = amnet.lyap.verify_forward_invariance(f, V)
+        self.assertEqual(result.code, amnet.lyap.VerificationResult.SUCCESS)
+
+    def test_verify_forward_invariance3(self):
+        # generate a known positive (nonlinear) system
+        n = 5   # up to 6 is bearable
+        np.random.seed(1)
+        A = np.round(3 * (2 * np.random.rand(n, n) - 1), 1)
+
+        # dynamics Amn
+        # x(t+1) = sat(A*x(t))
+        x = amnet.Variable(n, name='x')
+        f = amnet.atoms.sat(amnet.Linear(A, x))
+
+        # invariant region is L-infinity ball
+        # i.e., 0-sublevel set of the following function:
+        V = amnet.atoms.sub2(
+            amnet.atoms.norminf(x),
+            amnet.Constant(x, np.array([1.0]))
+        )
+
+        # should be forward invariant
+        result = amnet.lyap.verify_forward_invariance(f, V)
+        self.assertEqual(result.code, amnet.lyap.VerificationResult.SUCCESS)
 
     def donot_test_stability_search1(self):
         #Ad = self.Ad_osc
