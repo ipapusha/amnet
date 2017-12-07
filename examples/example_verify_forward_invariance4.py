@@ -17,20 +17,20 @@ f1 = atoms.sat(Linear(A1, x), lo=-2, hi=2)
 f2 = atoms.sat(Linear(A2, x), lo=-1, hi=1)
 f = atoms.sub2(f1, f2)
 
-# invariant region is L-infinity ball
-# i.e., 0-sublevel set of the following function:
-V = atoms.sub2(
-    atoms.absval(
-        atoms.sub2(
-            atoms.norminf(x),
-            Constant(x, np.array([1.5]))
-        )
-    ),
-    Constant(x, np.array([0.5]))
+# S1 = { x | ||x||_\infty <= 2 }
+# S2 = { x | ||x||_\infty <= 3 }
+V1 = atoms.sub2(
+    atoms.norminf(x),
+    Constant(x, np.array([2]))
 )
 
-# should be not forward invariant
-result = lyap.verify_forward_invariance(f, V)
+V2 = atoms.sub2(
+    atoms.norminf(x),
+    Constant(x, np.array([3]))
+)
+
+# should be forward invariant
+result = lyap.verify_forward_invariance(f, V1, V2)
 if result.code == lyap.VerificationResult.SUCCESS:
     print 'f is forward invariant'
 else:
