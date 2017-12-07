@@ -11,7 +11,7 @@ print 'A1=%s' % str(A1)
 print 'A2=%s' % str(A2)
 
 # dynamics Amn
-# x(t+1) = sat(A*x(t))
+# x(t+1) = sat_2(A1*x(t)) - sat_1(A2*x(t))
 x = Variable(n, name='x')
 f1 = atoms.sat(Linear(A1, x), lo=-2, hi=2)
 f2 = atoms.sat(Linear(A2, x), lo=-1, hi=1)

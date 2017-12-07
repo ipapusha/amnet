@@ -19,25 +19,30 @@ class VerificationResult(object):
         self.code = code
 
 
-def verify_forward_invariance(f, V):
+def verify_forward_invariance(f, V1, V2=None):
     """
-    For the discrete-time system x(t+1) = f(x(t)),
-    define the set S = {x | V(x) <= 0}.
-
-    Both f and V are Amn instances.
+    Let V1 and V2 be Amn instances whose 0-sublevels represent
+    particular sets, S1 = {x | V1(x) <= 0} and S2 = {x | V2(x) <= 0},
+    and let f be an Amn instance that corresponds to the discrete-time
+    system x(t+1) = f(x(t)).
 
     This method checks the forward invariance condition
-    once in S, always in S:
-    forall x . (x in S) -> (f(x) in S)
+    forall x . (x in S1) -> (f(x) in S2)
+
+    If V2 is not provided, then V1 = V2 (or equivalently, S1 = S2).
     """
+    if V2 is None:
+        V2 = V1
+
     # make sure dimensions work out
     n = f.outdim
     assert n >= 1
     assert f.indim == n and f.outdim == n
-    assert V.indim == n and V.outdim == 1
+    assert V1.indim == n and V1.outdim == 1
+    assert V2.indim == n and V2.outdim == 1
 
     # encode the two Amns
-    enc_f, enc_V1, enc_V2 = amnet.smt.SmtEncoder.multiple_encode(f, V, V)
+    enc_f, enc_V1, enc_V2 = amnet.smt.SmtEncoder.multiple_encode(f, V1, V2)
     solver = enc_f.solver
     assert solver is enc_f.solver
     assert solver is enc_V1.solver
@@ -48,15 +53,15 @@ def verify_forward_invariance(f, V):
     xp = enc_f.var_of(f)
     x1 = enc_V1.var_of_input()
     x2 = enc_V2.var_of_input()
-    Vx1 = enc_V1.var_of(V)
-    Vx2 = enc_V2.var_of(V)
+    Vx1 = enc_V1.var_of(V1)
+    Vx2 = enc_V2.var_of(V2)
 
     # negative of forward invariance condition:
-    # not(forall x . (x in S) -> (f(x) in S))
-    # == exists x . (x in S) and not(f(x) in S)
+    # not(forall x . (x in S1) -> (f(x) in S2))
+    # == exists x . (x in S1) and not(f(x) in S2)
     # == exists x, xp, x1, x2 .
-    # (xp = f(x)) and (V(x1) <= 0) and (x1 = x)
-    #             and (V(x2) > 0) and (x2 = xp)
+    # (xp = f(x)) and (V1(x1) <= 0) and (x1 = x)
+    #             and (V2(x2) > 0) and (x2 = xp)
     amnet.util.leqv_z3(solver, Vx1, np.array([0.0]))
     amnet.util.eqv_z3(solver, x1, x)
     amnet.util.gtv_z3(solver, Vx2, np.array([0.0]))
