@@ -3,8 +3,6 @@ import numpy as np
 from amnet import Variable, Linear, Constant
 from amnet import atoms, lyap
 
-# verify the forward invariance of the consensus subspace
-# S = {x | x_1 = ... = x_n } for a linear consensus system
 n = 5
 A = np.array([[0, 1/4, 1/4, 1/4, 1/4],
               [1/4, 0, 1/4, 1/4, 1/4],
@@ -15,7 +13,20 @@ print 'A=%s' % str(A)
 assert A.shape == (n, n)
 
 x = Variable(n, name='x')
-f = Linear(A, x)
+
+# linear consensus
+# f = Linear(A, x)
+# nonlinear consensus
+deltas = atoms.sat(
+    Linear(
+        A - np.eye(n),
+        x
+    )
+)
+f = atoms.add2(x, deltas)
+
+# verify the forward invariance of the consensus subspace
+# S = {x | x_1 = ... = x_n }
 V = atoms.sub2(
     atoms.max_all(x),
     atoms.min_all(x)
