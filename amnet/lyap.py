@@ -1,33 +1,123 @@
 import numpy as np
 import amnet
-from amnet.util import foldl, r2f, mfp
+from amnet.util import mfp
 
 import z3
 import cvxpy
 
 import itertools
 
+
+class VerificationResult(object):
+    # possible flags for result of a verification problem
+    SUCCESS = 1
+    FAIL = 2
+    FAIL_WITH_COUNTEREXAMPLE = 3
+
+    # constructor
+    def __init__(self, code):
+        self.code = code
+
+
+def verify_forward_invariance(f, V1, V2=None):
+    """
+    Let V1 and V2 be Amn instances whose 0-sublevels represent
+    particular sets, S1 = {x | V1(x) <= 0} and S2 = {x | V2(x) <= 0},
+    and let f be an Amn instance that corresponds to the discrete-time
+    system x(t+1) = f(x(t)).
+
+    This method checks the forward invariance condition
+    forall x . (x in S1) -> (f(x) in S2)
+
+    If V2 is not provided, then V1 = V2 (or equivalently, S1 = S2).
+    """
+    if V2 is None:
+        V2 = V1
+
+    # make sure dimensions work out
+    n = f.outdim
+    assert n >= 1
+    assert f.indim == n and f.outdim == n
+    assert V1.indim == n and V1.outdim == 1
+    assert V2.indim == n and V2.outdim == 1
+
+    # encode the two Amns
+    enc_f, enc_V1, enc_V2 = amnet.smt.SmtEncoder.multiple_encode(f, V1, V2)
+    solver = enc_f.solver
+    assert solver is enc_f.solver
+    assert solver is enc_V1.solver
+    assert solver is enc_V2.solver
+
+    # variables associated with inputs and outputs of the two Amns
+    x  = enc_f.var_of_input()
+    xp = enc_f.var_of(f)
+    x1 = enc_V1.var_of_input()
+    x2 = enc_V2.var_of_input()
+    Vx1 = enc_V1.var_of(V1)
+    Vx2 = enc_V2.var_of(V2)
+
+    # negative of forward invariance condition:
+    # not(forall x . (x in S1) -> (f(x) in S2))
+    # == exists x . (x in S1) and not(f(x) in S2)
+    # == exists x, xp, x1, x2 .
+    # (xp = f(x)) and (V1(x1) <= 0) and (x1 = x)
+    #             and (V2(x2) > 0) and (x2 = xp)
+    amnet.util.leqv_z3(solver, Vx1, np.array([0.0]))
+    amnet.util.eqv_z3(solver, x1, x)
+    amnet.util.gtv_z3(solver, Vx2, np.array([0.0]))
+    amnet.util.eqv_z3(solver, x2, xp)
+
+    # call the solver
+    result = solver.check()
+
+    # no counterexample found
+    if result == z3.unsat:
+        return VerificationResult(VerificationResult.SUCCESS)
+
+    # counterexample found, extract model
+    assert result == z3.sat
+    model = solver.model()
+    retval = VerificationResult(VerificationResult.FAIL_WITH_COUNTEREXAMPLE)
+    retval.x = amnet.util.mfpv(model, x)
+    retval.xp = amnet.util.mfpv(model, xp)
+    return retval
+
+
+def verify_stability(phi, V, reg=None):
+    """
+    Proves that a Lyapunov function candidate V is a certificate
+    for stability of the origin in the region reg, or return a
+    counterexample if V does not certify stability.
+
+    Dynamical system: x(t+1) = phi(x(t)) (Amn)
+    Lyapunov function candidate: V(x) (Amn)
+    Region: reg (AmnRegion)
+    """
+    # make sure dimensions work out
+    n = phi.outdim
+    assert n >= 1
+    assert n == phi.indim
+    assert V.outdim == 1
+    assert V.indim == n
+    assert reg.phi.indim == n
+    assert reg.phi.outdim == 1
+
+    # origin
+    x_origin = np.zeros(n)
+
+    # default region is the entire space R^n
+    if reg is None:
+        reg = amnet.region.global_space(x)
+
+    pass
+
+
+
+################################################################################
+# OLD CODE
+################################################################################
+
 _DEBUG_SMT2 = True
-
-
-def _max2_z3(x, y):
-    return z3.If(x <= y, y, x)
-
-def _maxN_z3(xs):
-    assert len(xs) >= 1
-    return foldl(_max2_z3, xs[0], xs[1:])
-
-def _abs_z3(x):
-    return _max2_z3(x, -x)
-
-def _normL1_z3(xs):
-    assert len(xs) >= 1
-    return z3.Sum([_abs_z3(x) for x in xs])
-
-def _normLinf_z3(xs):
-    assert len(xs) >= 1
-    return _maxN_z3([_abs_z3(x) for x in xs])
-
 
 
 def stability_search1(phi, xsys, m):
@@ -77,7 +167,7 @@ def stability_search1(phi, xsys, m):
         print 'Avar=%s' % Avar
         print 'bvar=%s' % bvar
 
-        esolver.add(_maxN_z3(bvar) == 0)
+        esolver.add(amnet.util.maxN_z3(bvar) == 0)
 
         for k, xk in enumerate(Xc):
             # point value
@@ -86,8 +176,8 @@ def stability_search1(phi, xsys, m):
             # Lyapunov max expressions
             Vk_terms = [z3.Sum([Avar[i][j]*xk[j] for j in range(n)]) + bvar[i] for i in range(m)]
             Vk_next_terms = [z3.Sum([Avar[i][j] * xk_next[j] for j in range(n)]) + bvar[i] for i in range(m)]
-            Vk_expr = _maxN_z3(Vk_terms)
-            Vk_next_expr = _maxN_z3(Vk_next_terms)
+            Vk_expr = amnet.util.maxN_z3(Vk_terms)
+            Vk_next_expr = amnet.util.maxN_z3(Vk_next_terms)
 
             # Lyapunov function constraints for counterexample xk
             Vk = z3.Real('v' + str(k))
@@ -105,14 +195,14 @@ def stability_search1(phi, xsys, m):
                 esolver.add(Vk_next < 0.99 * Vk)
 
             # CONDITIONING: impose upper bound on b
-            esolver.add(_normL1_z3(bvar) <= 10)
-            esolver.add(_maxN_z3(bvar) == 0)
+            esolver.add(amnet.util.norm1_z3(bvar) <= 10)
+            esolver.add(amnet.util.maxN_z3(bvar) == 0)
 
             #esolver.add([bvar[i] == 0 for i in range(m)])
 
             # CONDITIONING: impose normalization on A
             for i in range(m):
-                esolver.add(_normL1_z3(Avar[i]) <= 10)
+                esolver.add(amnet.util.norm1_z3(Avar[i]) <= 10)
 
         if _DEBUG_SMT2:
             filename = 'log/esolver_%s.smt2' % iter
@@ -156,7 +246,7 @@ def stability_search1(phi, xsys, m):
 
         # encode Vx
         Vx_terms = [z3.Sum([A_cand[i][j] * x[j] for j in range(n)]) + b_cand[i] for i in range(m)]
-        Vx_expr = _maxN_z3(Vx_terms)
+        Vx_expr = amnet.util.maxN_z3(Vx_terms)
         Vx = z3.Real('vx')
         fsolver.add(Vx == Vx_expr)
 
@@ -165,7 +255,7 @@ def stability_search1(phi, xsys, m):
 
         # encode Vx_next
         Vx_next_terms = [z3.Sum([A_cand[i][j] * x_next[j] for j in range(n)]) + b_cand[i] for i in range(m)]
-        Vx_next_expr = _maxN_z3(Vx_next_terms)
+        Vx_next_expr = amnet.util.maxN_z3(Vx_next_terms)
         Vx_next = z3.Real('vx_next')
         fsolver.add(Vx_next == Vx_next_expr)
 
@@ -174,8 +264,8 @@ def stability_search1(phi, xsys, m):
         fsolver.add(z3.Not(z3.And(Vx > 0, Vx_next - Vx < 0)))
 
         # CONDITIONING: only care about small counterexamples
-        fsolver.add(_normL1_z3(x) <= 5)
-        fsolver.add(_normL1_z3(x) >= 0.5)
+        fsolver.add(amnet.util.norm1_z3(x) <= 5)
+        fsolver.add(amnet.util.norm1_z3(x) >= 0.5)
 
         if _DEBUG_SMT2:
             filename = 'log/fsolver_%s.smt2' % iter
@@ -245,10 +335,10 @@ def find_local_counterexample(phi, xsys, A, b):
     # encode V(xc0) and V(xc1)
     Vc0 = z3.Real('vc0')
     Vc1 = z3.Real('vc1')
-    Vc0_expr = _maxN_z3(
+    Vc0_expr = amnet.util.maxN_z3(
         [z3.Sum([A[i][j] * xc0[j] for j in range(n)]) + b[i] for i in range(m)]
     )
-    Vc1_expr = _maxN_z3(
+    Vc1_expr = amnet.util.maxN_z3(
         [z3.Sum([A[i][j] * xc1[j] for j in range(n)]) + b[i] for i in range(m)]
     )
     fsolver.add(Vc0 == Vc0_expr)
@@ -269,7 +359,7 @@ def find_local_counterexample(phi, xsys, A, b):
     # condition 4 (<-> reformulate to just on the boundary)
     #             (therefore, includes condition 2)
     fsolver.push()
-    fsolver.add(_normL1_z3(xc0) == 1)
+    fsolver.add(amnet.util.norm1_z3(xc0) == 1)
     fsolver.add(z3.Not(Vc0 > 0))
 
     if fsolver.check() == z3.sat:
@@ -297,7 +387,7 @@ def find_local_counterexample(phi, xsys, A, b):
 
     # condition 3
     fsolver.push()
-    fsolver.add(_normL1_z3(xc0) <= 1)
+    fsolver.add(amnet.util.norm1_z3(xc0) <= 1)
     fsolver.add(z3.Not(Vc1 <= 0.99*Vc0))
 
     if fsolver.check() == z3.sat:
