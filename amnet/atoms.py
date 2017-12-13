@@ -392,6 +392,11 @@ def add2(x, y):
     n = x.outdim
 
     # OPTIMIZATION: special case for constants
+    if isinstance(x, amnet.Constant) and isinstance(y, amnet.Constant):
+        return amnet.Constant(
+            x.x,
+            x.b + y.b
+        )
     if isinstance(y, amnet.Constant):
         return amnet.Affine(
             np.eye(n),
@@ -431,6 +436,11 @@ def sub2(x, y):
     n = x.outdim
 
     # OPTIMIZATION: special case for constants
+    if isinstance(x, amnet.Constant) and isinstance(y, amnet.Constant):
+        return amnet.Constant(
+            x.x,
+            x.b - y.b
+        )
     if isinstance(y, amnet.Constant):
         return amnet.Affine(
             np.eye(n),

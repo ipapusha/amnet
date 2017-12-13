@@ -1,6 +1,5 @@
 import numpy as np
 
-
 ################################################################################
 # main AMN classes
 ################################################################################
@@ -16,7 +15,6 @@ class Amn(object):
     def eval(self, inp):
         return NotImplemented
 
-
 class Variable(Amn):
     """
     A Variable instance is the sole leaf of an AMN tree.
@@ -29,7 +27,7 @@ class Variable(Amn):
         self.name = name
 
     def __repr__(self):
-        return 'Variable(outdim=%s, name=%s)' % (self.outdim, self.name)
+        return "Variable(outdim=%s, name='%s')" % (self.outdim, self.name)
 
     def __str__(self):
         return '%s(%d)' % (self.name, self.outdim)
@@ -133,8 +131,10 @@ class Stack(Amn):
     """
     def __init__(self, x, y):
         assert x.indim == y.indim
-        assert not(isinstance(x, Variable) and isinstance(y, Variable)), \
-            'stacking variables not supported'
+        # TODO: assertion commented out to allow operations like x + x,
+        #       however, we need a way to bring this back, disallowing variable stacks
+        #assert not(isinstance(x, Variable) and isinstance(y, Variable)), \
+        #    'stacking variables not supported'
         super(Stack, self).__init__(outdim=x.outdim + y.outdim, indim=x.indim)
 
         self.x = x
