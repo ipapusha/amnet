@@ -28,6 +28,9 @@ class Variable(Amn):
         super(Variable, self).__init__(outdim=outdim, indim=outdim)
         self.name = name
 
+    def __repr__(self):
+        return 'Variable(outdim=%s, name=%s)' % (self.outdim, self.name)
+
     def __str__(self):
         return '%s(%d)' % (self.name, self.outdim)
 
@@ -56,6 +59,10 @@ class Affine(Amn):
         self.w = np.copy(w)
         self.x = x
         self.b = np.copy(b).flatten()
+
+    def __repr__(self):
+        return 'Affine(w=%s, x=%s, b=%s)' % \
+               (repr(self.w), repr(self.x), repr(self.b))
 
     def __str__(self):
         return 'Affine(w=%s, x=%s, b=%s)' % \
@@ -91,6 +98,10 @@ class Mu(Amn):
         self.x = x
         self.y = y
         self.z = z
+
+    def __repr__(self):
+        return 'Mu(%s, %s, %s)' % \
+               (repr(self.x), repr(self.y), repr(self.z))
 
     def __str__(self):
         return 'Mu(%s, %s, %s)' % \
@@ -129,6 +140,9 @@ class Stack(Amn):
         self.x = x
         self.y = y
 
+    def __repr__(self):
+        return 'Stack(%s, %s)' % (repr(self.x), repr(self.y))
+
     def __str__(self):
         return 'Stack(%s, %s)' % (str(self.x), str(self.y))
 
@@ -155,6 +169,9 @@ class Constant(Affine):
             b
         )
 
+    def __repr__(self):
+        return 'Constant(x=%s, b=%s)' % (repr(self.x), repr(self.b))
+
     def __str__(self):
         return 'Constant(x=%s, b=%s)' % (str(self.x), str(self.b.tolist()))
 
@@ -173,6 +190,9 @@ class Linear(Affine):
             x,
             np.zeros(w.shape[0])
         )
+
+    def __repr__(self):
+        return 'Linear(w=%s, x=%s)' % (repr(self.w), repr(self.x))
 
     def __str__(self):
         return 'Linear(w=%s, x=%s)' % (str(self.w.tolist()), str(self.x))
