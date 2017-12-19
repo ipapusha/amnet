@@ -8,6 +8,7 @@ import amnet
 # https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.classes.html
 
 # TODO: implement slicing and array access
+# TODO: add divide and true divide
 
 class Expr(object):
     # allows operators defined in this class to override
