@@ -21,6 +21,32 @@ class Expr(object):
     def __repr__(self):
         return self.data
 
+    # array operations
+    def __len__(self):
+        return 10
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            # create a matrix corresponding to the slice
+            n = len(self)
+            m = len(range(*item.indices(n)))
+            W = np.concatenate(
+                [np.eye(1, n, i) for i in xrange(*item.indices(n))],
+                axis=0
+            )
+            assert W.shape == (m, n)
+            print 'slice:', W
+            return 1
+        elif isinstance(item, int):
+            n = len(self)
+            assert 0 <= item < n
+            W = np.eye(1, n, item)
+            assert W.shape == (1, n)
+            print 'item:', W
+            return 2
+        else:
+            raise TypeError("Invalid slice type.")
+
     # unary expressions
     def __neg__(self):
         print "Calling %s.__neg__()" % (repr(self))
@@ -44,7 +70,7 @@ class Expr(object):
         return 3
 
     # comparisons
-    #def __cmp__(self, other):
+    # def __cmp__(self, other):
     #    print "Calling %s.__cmp__(%s)" % (repr(self), repr(other))
     #    return 4
 
@@ -71,6 +97,7 @@ class Expr(object):
     def __gt__(self, other):
         print "Calling %s.__gt__(%s)" % (repr(self), repr(other))
         return 9
+
 
 # from: https://stackoverflow.com/a/14636997
 # def _override(name):
@@ -163,3 +190,10 @@ print x <= 5
 
 print "16 <= x"
 print 16 <= x
+
+print "===================="
+print "The length of x is:", len(x)
+print "Slice: x[0] = ", x[0]
+print "Slice: x[1] = ", x[1]
+print "Slice: x[0:] = ", x[0:]
+print "Slice: x[0::2] = ", x[0::2]
