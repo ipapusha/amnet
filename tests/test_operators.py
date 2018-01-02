@@ -1,7 +1,6 @@
 import numpy as np
 import amnet
 
-
 # following ideas from:
 # https://stackoverflow.com/questions/14619449/how-can-i-override-comparisons-between-numpys-ndarray-and-my-type
 # https://docs.scipy.org/doc/numpy/user/basics.subclassing.html#basics-subclassing
@@ -9,6 +8,8 @@ import amnet
 
 # TODO: implement slicing and array access
 # TODO: add divide and true divide
+# TODO: add negative indexing
+# TODO: implement __setitem__ if necessary
 
 class Expr(object):
     # allows operators defined in this class to override
@@ -197,3 +198,7 @@ print "Slice: x[0] = ", x[0]
 print "Slice: x[1] = ", x[1]
 print "Slice: x[0:] = ", x[0:]
 print "Slice: x[0::2] = ", x[0::2]
+# print "End: x[-1] = ", x[-1]
+# print "Setitem: x[0] = 2 begin..."
+# x[0] = 2
+# print "end."
