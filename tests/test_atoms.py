@@ -34,6 +34,54 @@ class TestAtoms(unittest.TestCase):
             self.assertEqual(x0.eval(xinp), xv0)
             self.assertEqual(x1.eval(xinp), xv1)
 
+    def test_select_indices(self):
+        x = amnet.Variable(3, name='x')
+        x0 = amnet.atoms.select_indices(x, [0])
+        x1 = amnet.atoms.select_indices(x, [0, 1, 0])
+
+        for (xv0, xv1, xv2) in product(self.floatvals, repeat=3):
+            xinp = np.array([xv0, xv1, xv2])
+            self.assertEqual(x0.eval(xinp), xv0)
+            self.assertAlmostEqual(norm(x1.eval(xinp) - np.array([xv0, xv1, xv0])), 0)
+
+    def test_select_slice(self):
+        x = amnet.Variable(3, name='x')
+        x0 = amnet.atoms.select_slice(x, slice(0, 3)) # [0, 1, 2]
+        x1 = amnet.atoms.select_indices(x, [0, 1, 2])
+
+        y0 = amnet.atoms.select_slice(x, slice(0, 2)) # [0, 1]
+        y1 = amnet.atoms.select_indices(x, [0, 1])
+
+        z0 = amnet.atoms.select_slice(x, slice(None, None, -1)) # [2, 1, 0]
+        z1 = amnet.atoms.select_indices(x, [2, 1, 0])
+
+        for xv in product(self.floatvals, repeat=3):
+            xinp = np.array(xv)
+
+            x0v = x0.eval(xinp)
+            x1v = x1.eval(xinp)
+            x_true = np.array([xv[0], xv[1], xv[2]])
+            self.assertEqual(x0.outdim, 3)
+            self.assertEqual(x1.outdim, 3)
+            self.assertAlmostEqual(norm(x0v - x1v), 0)
+            self.assertAlmostEqual(norm(x0v - x_true), 0)
+
+            y0v = y0.eval(xinp)
+            y1v = y1.eval(xinp)
+            y_true = np.array([xv[0], xv[1]])
+            self.assertEqual(y0.outdim, 2)
+            self.assertEqual(y1.outdim, 2)
+            self.assertAlmostEqual(norm(y0v - y1v), 0)
+            self.assertAlmostEqual(norm(y0v - y_true), 0)
+
+            z0v = z0.eval(xinp)
+            z1v = z1.eval(xinp)
+            z_true = np.array([xv[2], xv[1], xv[0]])
+            self.assertEqual(z0.outdim, 3)
+            self.assertEqual(z1.outdim, 3)
+            self.assertAlmostEqual(norm(z0v - z1v), 0)
+            self.assertAlmostEqual(norm(z0v - z_true), 0)
+
     def test_to_from_list(self):
         x = amnet.Variable(2, name='x')
 

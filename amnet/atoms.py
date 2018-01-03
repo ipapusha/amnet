@@ -22,6 +22,47 @@ def select(phi, k):
     )
 
 
+def select_indices(phi, indices):
+    """ returns the components of phi given by the indices list """
+    assert phi.outdim >= 1
+    assert not(isinstance(indices, slice))
+
+    # dimensions
+    n = phi.outdim
+    m = len(indices)
+
+    # bounds checking
+    assert all([(0 <= i < n) for i in indices])
+    assert m >= 1
+
+    # optimization: prevent creating an affine transformation
+    #               if phi is one-dimensional
+    if phi.outdim == 1 and m == 1 and indices[0] == 0:
+        return phi
+
+    # select appropriate components
+    W = np.concatenate(
+        [np.eye(1, n, i) for i in indices],
+        axis=0
+    )
+    assert W.shape == (m, n)
+
+    return amnet.Linear(
+        W,
+        phi
+    )
+
+
+def select_slice(phi, sl):
+    """ returns the components of phi given by the slice """
+    assert phi.outdim >= 1
+    assert isinstance(sl, slice)
+
+    n = phi.outdim
+    indices = range(*sl.indices(n))
+    return select_indices(phi, indices)
+
+
 def to_list(phi):
     """ converts the output components of phi to a list """
     assert phi.outdim >= 1
