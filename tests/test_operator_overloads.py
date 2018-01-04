@@ -155,6 +155,56 @@ class TestOperatorOverloads(unittest.TestCase):
             self.assertAlmostEqual(norm(w8.eval(xinp) - (xinp)), 0)
             self.assertAlmostEqual(norm(w9.eval(xinp) - (-2 * relu(xinp) + xinp)), 0)
 
+    def test_mul(self):
+        x = amnet.Variable(3, name='x')
+        y = amnet.atoms.relu(x)
+
+        A = np.arange(2*3).reshape((2, 3))
+        b = np.array([6., 7.])
+
+        # various multiplies
+        z1 = y * 2
+        z2 = 3 * y
+        z3 = -4.0 * y
+        z4 = 5.1 * (-y)
+        z5 = np.array([7.5]) * y
+        z6 = y * np.array([-8.9])
+        z7 = A*y
+        z8 = A*y + b
+        z9 = 2 * b - A * y
+        z10 = b - (3 * (A * y))
+        z11 = b - (3 * A) * y
+
+        self.assertEqual(len(z1), 3)
+        self.assertEqual(len(z2), 3)
+        self.assertEqual(len(z3), 3)
+        self.assertEqual(len(z4), 3)
+        self.assertEqual(len(z5), 3)
+        self.assertEqual(len(z6), 3)
+        self.assertEqual(len(z7), 2)
+        self.assertEqual(len(z8), 2)
+        self.assertEqual(len(z9), 2)
+        self.assertEqual(len(z10), 2)
+        self.assertEqual(len(z11), 2)
+
+        # true relu
+        def relu(inp): return np.maximum(inp, 0)
+
+        for xv in product(self.floatvals2, repeat=3):
+            xinp = np.array(xv)
+
+            self.assertAlmostEqual(norm(z1.eval(xinp) - (relu(xinp) * 2)), 0)
+            self.assertAlmostEqual(norm(z2.eval(xinp) - (relu(xinp) * 3)), 0)
+            self.assertAlmostEqual(norm(z3.eval(xinp) - (relu(xinp) * (-4.0))), 0)
+            self.assertAlmostEqual(norm(z4.eval(xinp) - (relu(xinp) * (-5.1))), 0)
+            self.assertAlmostEqual(norm(z5.eval(xinp) - (relu(xinp) * 7.5)), 0)
+            self.assertAlmostEqual(norm(z6.eval(xinp) - (relu(xinp) * (-8.9))), 0)
+            self.assertAlmostEqual(norm(z7.eval(xinp) - (np.dot(A, relu(xinp)))), 0)
+            self.assertAlmostEqual(norm(z8.eval(xinp) - (np.dot(A, relu(xinp)) + b)), 0)
+            self.assertAlmostEqual(norm(z9.eval(xinp) - (np.dot(-A, relu(xinp)) + (2.0*b))), 0)
+            self.assertAlmostEqual(norm(z10.eval(xinp) - (np.dot(-3.0 * A, relu(xinp)) + b)), 0)
+            self.assertAlmostEqual(norm(z11.eval(xinp) - (np.dot(-3.0 * A, relu(xinp)) + b)), 0)
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestOperatorOverloads)

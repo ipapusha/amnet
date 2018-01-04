@@ -2,6 +2,7 @@ import numpy as np
 import amnet.atoms as atoms
 import numbers
 
+
 ################################################################################
 # main AMN classes
 ################################################################################
@@ -129,6 +130,56 @@ class Amn(object):
 
     def __rsub__(self, other):
         return (self.__neg__()).__add__(other)
+
+    def __mul__(self, other):
+        """
+        since each node is thought of as a column vector,
+        right-multiplication is only supported by a scalar or 1x1 array
+        """
+        if isinstance(other, numbers.Real):
+            # perform multiply
+            return atoms.scale(other, self)
+
+        elif isinstance(other, np.ndarray):
+            # check dimensions
+            if not (other.shape == (1,)):
+                return ValueError("Dimension mismatch while multiplying on the right.")
+
+            # perform multiply
+            assert isinstance(other[0], numbers.Real)
+            return atoms.scale(other[0], self)
+
+        else:
+            raise TypeError("Invalid overload while calling %s.__mul__(%s)" % (repr(self), repr(other)))
+
+    def __rmul__(self, other):
+        """
+        since each node is thought of as a column vector,
+        left-multiplication is only supported by a scalar, 1x1 array, or a matrix of appropriate size
+        """
+        if isinstance(other, numbers.Real):
+            # perform multiply
+            return atoms.scale(other, self)
+
+        elif isinstance(other, np.ndarray) and other.shape == (1,):
+            # perform multiply
+            assert isinstance(other[0], numbers.Real)
+            return atoms.scale(other[0], self)
+
+        elif isinstance(other, np.ndarray) and other.ndim == 2:
+            # check dimensions
+            (m, n) = other.shape
+            assert m >= 1 and n >= 1
+            if not (n == self.outdim):
+                return ValueError("Dimension mismatch while multiplying on the left.")
+            return Linear(
+                other,
+                self
+            )
+
+        else:
+            raise TypeError("Invalid overload while calling %s.__rmul__(%s)" % (repr(self), repr(other)))
+
 
 class Variable(Amn):
     """
