@@ -1,4 +1,5 @@
 import numpy as np
+import amnet.atoms as atoms
 
 ################################################################################
 # main AMN classes
@@ -6,14 +7,47 @@ import numpy as np
 
 class Amn(object):
     """
-    Abstract class that every AMN node must implement.
+    Every affine multiplexing network node descends from Amn.
     """
+    # allows operators defined in this class to override
+    # numpy's operators when interacting with numpy objects
+    __array_priority__ = 200
+
     def __init__(self, outdim=0, indim=0):
         self.outdim = outdim
         self.indim = indim
 
     def eval(self, inp):
         return NotImplemented
+
+    def _is_derived_instance(self):
+        """
+        returns True if the object is an instance of one of the
+        recognized direct subclasses of Amn
+        """
+        return any([
+            isinstance(self, cls) for cls in [
+                Variable, Affine, Mu, Stack
+            ]
+        ])
+
+    # array operations
+    def __len__(self):
+        return self.outdim
+
+    def __getitem__(self, item):
+        # we should not be slicing into the abstract class
+        assert self._is_derived_instance()
+
+        if isinstance(item, slice):
+            return atoms.select_slice(self, item)
+        elif isinstance(item, int):
+            if not(0 <= item < len(self)):
+                raise IndexError("Invalid index.")
+            return atoms.select(self, item)
+        else:
+            raise TypeError("Invalid slice type.")
+
 
 class Variable(Amn):
     """
