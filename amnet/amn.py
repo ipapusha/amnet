@@ -48,6 +48,26 @@ class Amn(object):
         else:
             raise TypeError("Invalid slice type.")
 
+    # unary operations
+    def __neg__(self):
+        assert self._is_derived_instance()
+        return atoms.negate(self)
+
+    # binary operations
+    def __add__(self, other):
+        assert self._is_derived_instance()
+        if isinstance(other, int):
+            # updimension
+
+            # perform add
+            return None
+        elif isinstance(other, Amn):
+            # check dimensions
+
+            # perform add
+            return None
+        else:
+            raise TypeError("Invalid overload while calling %s.__add__(%s)" % (repr(self), repr(other)))
 
 class Variable(Amn):
     """
