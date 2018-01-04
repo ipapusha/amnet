@@ -1,6 +1,12 @@
 import numpy as np
 import amnet
 
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# The #1 RULE for this module (not enforced, though I wish it could be enforced
+# with a static code analysis tool (TODO: implement such a tool)) is this:
+# Do not use AMN overloaded operators when defining atomic operations.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 ################################################################################
 # dimension and abstraction utilities
@@ -289,6 +295,7 @@ def norminf(phi):
        [absval(select(phi, k))
         for k in range(phi.outdim)]
     )
+
 
 def relu_old(phi):
     """
