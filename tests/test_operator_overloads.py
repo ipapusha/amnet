@@ -103,6 +103,59 @@ class TestOperatorOverloads(unittest.TestCase):
             xinp = np.array(xv)
             self.assertAlmostEqual(norm(z.eval(xinp) - negrelu(xinp)), 0)
 
+    def test_add_sub(self):
+        x = amnet.Variable(3, name='x')
+        y = amnet.atoms.relu(x)
+
+        # various adds
+        z1 = y + 1
+        z2 = y + 2.1
+        z3 = y + np.array([1, 2, 3])
+        z4 = 1 + y
+        z5 = 2.1 + y
+        z6 = np.array([1, 2, 3]) + y
+        z7 = x + y
+        z8 = x + y + y
+
+        # various subtracts
+        w1 = y - 1
+        w2 = y - 2.1
+        w3 = y - np.array([1, 2, 3])
+        w4 = 1 - y
+        w5 = 2.1 - y
+        w6 = np.array([1, 2, 3]) - y
+        w7 = x - y
+        w8 = x - (y - y)  # x - y + y
+        w9 = x - (y + y)  # x - 2*y
+
+        # true relu
+        def relu(inp): return np.maximum(inp, 0)
+
+        for xv in product(self.floatvals2, repeat=3):
+            xinp = np.array(xv)
+
+            self.assertAlmostEqual(norm(z1.eval(xinp) - (relu(xinp) + 1)), 0)
+            self.assertAlmostEqual(norm(z2.eval(xinp) - (relu(xinp) + 2.1)), 0)
+            self.assertAlmostEqual(norm(z3.eval(xinp) - (relu(xinp) + np.array([1, 2, 3]))), 0)
+            self.assertAlmostEqual(norm(z4.eval(xinp) - (relu(xinp) + 1)), 0)
+            self.assertAlmostEqual(norm(z5.eval(xinp) - (relu(xinp) + 2.1)), 0)
+            self.assertAlmostEqual(norm(z6.eval(xinp) - (relu(xinp) + np.array([1, 2, 3]))), 0)
+            self.assertAlmostEqual(norm(z6[2].eval(xinp) - np.array([relu(xinp[2]) + 3])), 0)
+            self.assertAlmostEqual(norm(z7.eval(xinp) - (xinp + relu(xinp))), 0)
+            self.assertAlmostEqual(norm(z8.eval(xinp) - (xinp + 2*relu(xinp))), 0)
+
+            self.assertAlmostEqual(norm(w1.eval(xinp) - (relu(xinp) - 1)), 0)
+            self.assertAlmostEqual(norm(w2.eval(xinp) - (relu(xinp) - 2.1)), 0)
+            self.assertAlmostEqual(norm(w3.eval(xinp) - (relu(xinp) - np.array([1, 2, 3]))), 0)
+            self.assertAlmostEqual(norm(w4.eval(xinp) - (-relu(xinp) + 1)), 0)
+            self.assertAlmostEqual(norm(w5.eval(xinp) - (-relu(xinp) + 2.1)), 0)
+            self.assertAlmostEqual(norm(w6.eval(xinp) - (-relu(xinp) + np.array([1, 2, 3]))), 0)
+            self.assertAlmostEqual(norm(w6[2].eval(xinp) - np.array([-relu(xinp[2]) + 3])), 0)
+            self.assertAlmostEqual(norm(w7.eval(xinp) - (xinp - relu(xinp))), 0)
+            self.assertAlmostEqual(norm(w8.eval(xinp) - (xinp)), 0)
+            self.assertAlmostEqual(norm(w9.eval(xinp) - (-2 * relu(xinp) + xinp)), 0)
+
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestOperatorOverloads)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
