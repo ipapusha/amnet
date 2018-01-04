@@ -88,6 +88,21 @@ class TestOperatorOverloads(unittest.TestCase):
         self.assertTrue(z[0] is z)
         self.assertTrue(z[0] is amnet.atoms.select(z, 0))
 
+    def test_negate(self):
+        x = amnet.Variable(3, name='x')
+        y = amnet.atoms.relu(x)
+        z = -y
+
+        def negrelu(inp):
+            return -np.maximum(inp, 0)
+
+        self.assertEqual(len(z), 3)
+        self.assertEqual(z.outdim, 3)
+
+        for xv in product(self.floatvals2, repeat=3):
+            xinp = np.array(xv)
+            self.assertAlmostEqual(norm(z.eval(xinp) - negrelu(xinp)), 0)
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestOperatorOverloads)
     result = unittest.TextTestRunner(verbosity=2).run(suite)

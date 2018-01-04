@@ -1,5 +1,6 @@
 import numpy as np
 import amnet.atoms as atoms
+import numbers
 
 ################################################################################
 # main AMN classes
@@ -41,10 +42,12 @@ class Amn(object):
 
         if isinstance(item, slice):
             return atoms.select_slice(self, item)
+
         elif isinstance(item, int):
             if not(0 <= item < len(self)):
                 raise IndexError("Invalid index.")
             return atoms.select(self, item)
+
         else:
             raise TypeError("Invalid slice type.")
 
@@ -56,18 +59,76 @@ class Amn(object):
     # binary operations
     def __add__(self, other):
         assert self._is_derived_instance()
-        if isinstance(other, int):
-            # updimension
+
+        if isinstance(other, numbers.Real):
+            # up-dimension and add
+            c = Constant(
+                self,
+                np.repeat(other, self.outdim)
+            )
+            return atoms.add2(self, c)
+
+        elif isinstance(other, np.ndarray):
+            # check dimensions
+            if not(other.shape == (self.outdim,)):
+                return ValueError("Dimension mismatch adding an array.")
 
             # perform add
-            return None
+            c = Constant(
+                self,
+                other
+            )
+            return atoms.add2(self, c)
+
         elif isinstance(other, Amn):
             # check dimensions
+            if not(self.outdim == other.outdim):
+                return ValueError("Dimension mismatch adding an Amn.")
 
             # perform add
-            return None
+            return atoms.add2(self, other)
+
         else:
             raise TypeError("Invalid overload while calling %s.__add__(%s)" % (repr(self), repr(other)))
+
+    __radd__ = __add__
+
+    def __sub__(self, other):
+        assert self._is_derived_instance()
+
+        if isinstance(other, numbers.Real):
+            # up-dimension and add
+            c = Constant(
+                self,
+                np.repeat(other, self.outdim)
+            )
+            return atoms.sub2(self, c)
+
+        elif isinstance(other, np.ndarray):
+            # check dimensions
+            if not(other.shape == (self.outdim,)):
+                return ValueError("Dimension mismatch subtracting an array.")
+
+            # perform add
+            c = Constant(
+                self,
+                other
+            )
+            return atoms.sub2(self, c)
+
+        elif isinstance(other, Amn):
+            # check dimensions
+            if not(self.outdim == other.outdim):
+                return ValueError("Dimension mismatch subtracting an Amn.")
+
+            # perform add
+            return atoms.sub2(self, other)
+
+        else:
+            raise TypeError("Invalid overload while calling %s.__sub__(%s)" % (repr(self), repr(other)))
+
+    def __rsub__(self, other):
+        return (self.__neg__()).__add__(other)
 
 class Variable(Amn):
     """

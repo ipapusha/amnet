@@ -61,6 +61,7 @@ class Expr(object):
     def __radd__(self, other):
         print "Calling %s.__radd__(%s)" % (repr(self), repr(other))
         return 1
+    #__radd__ = __add__
 
     def __mul__(self, other):
         print "Calling %s.__mul__(%s)" % (repr(self), repr(other))
@@ -69,6 +70,15 @@ class Expr(object):
     def __rmul__(self, other):
         print "Calling %s.__rmul__(%s)" % (repr(self), repr(other))
         return 3
+
+    def __sub__(self, other):
+        print "Calling %s.__sub__(%s)" % (repr(self), repr(other))
+        return 10
+
+    def __rsub__(self, other):
+        print "Calling %s.__rsub__(%s)" % (repr(self), repr(other))
+        return 11
+
 
     # comparisons
     # def __cmp__(self, other):
@@ -153,6 +163,19 @@ print A * x
 
 print "x * A"
 print x * A
+
+print "===================="
+print "x - A"
+print x - A
+
+print "x - 1"
+print x - 1
+
+print "A - x"
+print A - x
+
+print "1 - x"
+print 1 - x
 
 print "===================="
 print "x < A"
