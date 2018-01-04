@@ -98,6 +98,24 @@ def descendants(phi):
     return d
 
 
+def variables_of(phi):
+    """
+    returns a list of all variables in the graph of phi
+    """
+    return [d for d in descendants(phi)
+            if isinstance(d, amnet.Variable)]
+
+
+def variable_of(phi):
+    """
+    returns the variable associated with phi (assuming there is only one)
+    """
+    vs = variables_of(phi)
+    assert len(vs) == 1
+    assert isinstance(vs[0], amnet.Variable)
+    return vs[0]
+
+
 def valid_tree(phi):
     """
     goes through the tree of phi and ensures that

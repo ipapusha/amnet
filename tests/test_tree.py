@@ -83,6 +83,21 @@ class TestTree(unittest.TestCase):
             1
         )
 
+        # determine that variable
+        v = amnet.tree.variable_of(phi)
+        self.assertTrue(v is xyz)
+        self.assertTrue(isinstance(v, amnet.Variable))
+        self.assertEqual(v.outdim, 3)
+        self.assertEqual(v.indim, 3)
+
+        # determine the other variables
+        for psi in [xyz, x, yz, maxyz, twoxp1, twox, threex, fivexp1, phi]:
+            v = amnet.tree.variable_of(psi)
+            self.assertTrue(v is xyz)
+            self.assertTrue(isinstance(v, amnet.Variable))
+            self.assertEqual(v.outdim, 3)
+            self.assertEqual(v.indim, 3)
+
         # this dag has only one mu
         self.assertEqual(
             len([d for d in desc if isinstance(d, amnet.Mu)]),
