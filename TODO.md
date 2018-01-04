@@ -15,6 +15,10 @@
 
 # Operator overloads
 - [ ] implement `__matmul__` operator (@) instead of *
+- [ ] add divide and true divide
+- [ ] add negative indexing for integer indices (not just extended slices)
+- [ ] determine if lvalue references and iadds make sense
+      e.g., `__setitem__`
 
 # Tree Simplifications
 - [ ] Replace all constants to derive from the smallest dimension
