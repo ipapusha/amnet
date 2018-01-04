@@ -13,6 +13,9 @@
 - [ ] efficient `relu_nn` atom (full relu nn) (niklas)
 - [ ] implement `compose_rewire`
 
+# Operator overloads
+- [ ] implement `__matmul__` operator (@) instead of *
+
 # Tree Simplifications
 - [ ] Replace all constants to derive from the smallest dimension
 - [ ] Simplify matrix multiplies recursively if they result in a smaller
