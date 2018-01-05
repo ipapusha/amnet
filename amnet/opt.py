@@ -54,20 +54,43 @@ class Constraint(object):
     """
     def __init__(self, lhs, rhs, rel):
         assert lhs.outdim == rhs.outdim
+        assert lhs.outdim >= 1
         assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ]
         self.lhs = lhs
         self.rhs = rhs
         self.rel = rel
 
+        # cache input variable reference
+        # XXX: possibly move this check into the problem creation routines
+        lhs_variable = amnet.tree.unique_leaf_of(lhs)
+        rhs_variable = amnet.tree.unique_leaf_of(rhs)
+        assert lhs_variable is rhs_variable, 'LHS and RHS must depend on the same Variable'
+        self.variable = lhs_variable
 
 
 ##########
 # Problem
 ##########
 
+class Result(object):
+    pass
+
+
+class OptOptions(object):
+    def __init__(self):
+        # default options
+        self.obj_lo = -float(2**20)
+        self.obj_hi = float(2**20)
+        self.fptol = float(2**-9)
+
+
 class Problem(object):
     # Objective (or constant)
     # list of Constraints
     # solve()
     # single variable
-    pass
+    def __init__(self, objective, constraints=None, options=None):
+        assert objective is not None
+        self.objective = objective
+        self.constraints = [] if constraints is None else constraints
+        self.options = OptOptions() if options is None else options  # default options
