@@ -84,7 +84,7 @@ class TestTree(unittest.TestCase):
         )
 
         # determine that variable
-        v = amnet.tree.variable_of(phi)
+        v = amnet.tree.unique_leaf_of(phi)
         self.assertTrue(v is xyz)
         self.assertTrue(isinstance(v, amnet.Variable))
         self.assertEqual(v.outdim, 3)
@@ -92,7 +92,7 @@ class TestTree(unittest.TestCase):
 
         # determine the other variables
         for psi in [xyz, x, yz, maxyz, twoxp1, twox, threex, fivexp1, phi]:
-            v = amnet.tree.variable_of(psi)
+            v = amnet.tree.unique_leaf_of(psi)
             self.assertTrue(v is xyz)
             self.assertTrue(isinstance(v, amnet.Variable))
             self.assertEqual(v.outdim, 3)
