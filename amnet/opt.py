@@ -73,7 +73,9 @@ class Constraint(object):
 ##########
 
 class Result(object):
-    pass
+    def __init__(self, objval, optpoint):
+        self.objval = objval
+        self.optpoint = optpoint
 
 
 class OptOptions(object):
