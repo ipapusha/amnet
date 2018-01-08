@@ -1,5 +1,6 @@
 import numpy as np
 import amnet
+import amnet.opt as opt
 
 import sys
 import unittest
@@ -49,17 +50,18 @@ class TestOpt(unittest.TestCase):
         one3 = amnet.Constant(x, 2*np.ones(3))
         none3 = amnet.Constant(x, -1*np.ones(3))
 
-        obj = amnet.opt.Minimize(f)
-        cons = [amnet.opt.Constraint(x, one3, amnet.opt.Relation.LE),
-                amnet.opt.Constraint(x, none3, amnet.opt.Relation.GE)]
+        obj = opt.Minimize(f)
+        cons = [opt.Constraint(x, one3, opt.Relation.LE),
+                opt.Constraint(x, none3, opt.Relation.GE)]
         #print cons
 
-        prob = amnet.opt.Problem(obj, cons)
+        prob = opt.Problem(obj, cons)
         self.assertTrue(prob.eval_feasible(np.array([0, 0, 0])))
         self.assertFalse(prob.eval_feasible(np.array([0, 0, -9])))
 
         result = prob.solve()
-        print result
+        #print result
+        self.assertTrue(result.code == opt.OptResultCode.SUCCESS)
 
 
 if __name__ == '__main__':
