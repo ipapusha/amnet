@@ -1,6 +1,10 @@
+from __future__ import division
+
 import numpy as np
 import amnet
+import z3
 from enum import Enum
+import itertools
 
 ################################################################################
 # Classes and routines related to Multiplexing Programming with AMNs
@@ -23,6 +27,13 @@ class Objective(object):
         self.minimize = minimize
         self.phi = phi
         self.variable = amnet.tree.unique_leaf_of(phi)
+        self.is_negated = False
+
+    def negate(self):
+        assert self.phi.outdim == 1
+        self.phi = amnet.atoms.negate(self.phi)
+        self.is_negated = (not self.is_negated)
+        self.minimize = (not self.minimize)
 
 
 class Minimize(Objective):
@@ -45,6 +56,7 @@ class Relation(Enum):
     GT = 3  # >
     GE = 4  # >=
     EQ = 5  # ==
+    NEQ = 6  # !=
 
 
 class Constraint(object):
@@ -55,7 +67,7 @@ class Constraint(object):
     def __init__(self, lhs, rhs, rel):
         assert lhs.outdim == rhs.outdim
         assert lhs.outdim >= 1
-        assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ]
+        assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ, Relation.NEQ]
         self.lhs = lhs
         self.rhs = rhs
         self.rel = rel
@@ -72,10 +84,19 @@ class Constraint(object):
 # Problem
 ##########
 
-class Result(object):
-    def __init__(self, objval, optpoint):
-        self.objval = objval
+class OptResultCode(Enum):
+    SUCCESS = 1
+    FAILURE = 2
+    INFEASIBLE = 3
+    UNBOUNDED_BELOW = 4  # not yet implemented
+    UNBOUNDED_ABOVE = 5  # not yet implemented
+
+
+class OptResult(object):
+    def __init__(self, optval, optpoint, code=OptResultCode.SUCCESS):
+        self.optval = optval
         self.optpoint = optpoint
+        self.code = code
 
 
 class OptOptions(object):
@@ -91,8 +112,127 @@ class Problem(object):
     # list of Constraints
     # solve()
     # single variable
-    def __init__(self, objective, constraints=None, options=None):
+    def __init__(self, objective, constraints=None, options=None, solver=None):
         assert objective is not None
         self.objective = objective
         self.constraints = [] if constraints is None else constraints
         self.options = OptOptions() if options is None else options  # default options
+
+        # default objective is zero for a feasibility problem
+        if objective is None:
+            assert len(constraints) >= 1
+            self.variable = constraints[0].variable
+            self.objective = amnet.atoms.zero_from(self.variable, dim=1)
+        else:
+            self.variable = self.objective.variable
+
+        # ensure the leaf variable is the same across constraints
+        assert all([constraint.variable is self.variable
+                    for constraint in self.constraints])
+
+        # initialize default solver if necessary
+        if solver is None:
+            self.solver = z3.Solver()
+        else:
+            self.solver = solver
+        self.enc_list = []
+
+    def _encode_objective_constraints(self):
+        assert self.solver is not None
+        assert self.objective.phi.outdim == 1
+
+        # Amn instances for this problem are encoded in a particular order
+        amn_list = list(itertools.chain(
+            [self.objective.phi],
+            [constraint.lhs for constraint in self.constraints],
+            [constraint.rhs for constraint in self.constraints]
+        ))
+        assert len(amn_list) >= 1
+        assert (not (len(self.constraints) == 0)) or (len(amn_list) == 1)
+        assert (not (len(self.constraints) > 0)) or (len(amn_list) > 1)
+
+        # encode them into a single Smt encoder
+        enc_list = amnet.smt.SmtEncoder.multiple_encoders_for(
+            phi_list=amn_list,
+            solver=self.solver,
+            push_between=False
+        )
+        assert len(enc_list) == len(amn_list)
+        assert len(enc_list) >= 1
+
+        # set the encoder lists after encoding from Smt encoder
+        self.enc_list = enc_list
+        self.enc_objective = enc_list[0]
+        assert (len(enc_list) - 1) % 2 == 0
+        ncons = (len(enc_list) - 1) // 2
+        self.enc_lhs_list = enc_list[1:1+ncons]
+        self.enc_rhs_list = enc_list[1+ncons:1+2*ncons]
+        assert len(self.enc_lhs_list) == len(self.constraints)
+        assert len(self.enc_rhs_list) == len(self.constraints)
+        assert 1 + len(self.enc_lhs_list) + len(self.enc_rhs_list) == len(self.enc_list)
+
+    def _encode_constraint_relations(self):
+        assert self.solver is not None
+        assert len(self.enc_list) >= 1
+
+        # Amn instances for this problem are encoded in a particular order
+        for i in xrange(len(self.constraints)):
+            phi_lhs = self.constraints[i].lhs
+            phi_rhs = self.constraints[i].rhs
+            enc_lhs = self.enc_lhs_list[i]
+            enc_rhs = self.enc_lhs_list[i]
+            rel = self.constraints[i].rel
+
+            # determine z3 variables
+            v_lhs = enc_lhs.var_of(phi_lhs)
+            v_rhs = enc_rhs.var_of(phi_rhs)
+            assert len(v_lhs) == len(v_rhs) == len(phi_lhs.outdim) == len(phi_rhs.outdim)
+
+            # encode the relation
+            if rel == Relation.LT:
+                pass
+            elif rel == Relation.LE:
+                pass
+            elif rel == Relation.GT:
+                pass
+            elif rel == Relation.GE:
+                pass
+            elif rel == Relation.EQ:
+                pass
+            elif rel == Relation.NEQ:
+                assert False, 'NEQ relation not implemented'
+            else:
+                assert False, 'Impossible relation'
+
+
+    def _encode_objective_relation(self, gamma):
+        pass
+
+    def _constraint_encoder(self):
+        """ constraints are always encoded """
+        assert self.solver is not None
+        if len(self.constraints) >= 1:
+            enc_list = amnet.smt.SmtEncoder.multiple_encoders_for()
+        else:
+            return None
+
+    def _encode_objective(self, gamma):
+        pass
+
+    def _bisection_minimize(self):
+        assert self.objective.minimize
+        pass
+
+    def _bisection_maximize(self):
+        # XXX: default implementation: negate the objective and minimize instead
+        assert (not self.objective.minimize)
+        self.objective.negate()
+
+        assert self.objective.minimize
+        return self._bisection_minimize()
+
+    def solve(self):
+        if self.objective.minimize:
+            return self._bisection_minimize()
+        else:
+            return self._bisection_maximize()

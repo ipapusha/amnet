@@ -431,7 +431,6 @@ class SmtEncoder(object):
         for ci, bi in izip(cvar, phi.b):
             self.solver.add(ci == bi)
 
-
     def _encode(self):
         """
         encodes the relationship between the nodes
