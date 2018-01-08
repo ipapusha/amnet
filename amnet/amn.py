@@ -141,6 +141,12 @@ class Amn(object):
         return Constraint(self, phi_other, rel=Relation.LE)
 
     def __eq__(self, other):
+        """
+        WARNING: when overloading __eq__, make sure to distinguish between
+        `==` and `is` comparison. In particular, note that `in` comparison
+        uses both `==` and `is`. This means that lists of nodes should not
+        be searched using `in`.
+        """
         assert self._is_derived_instance()
         phi_other = atoms.vectorize_to(self, other)
         return Constraint(self, phi_other, rel=Relation.EQ)

@@ -63,6 +63,27 @@ class TestOpt(unittest.TestCase):
         #print result
         self.assertTrue(result.code == opt.OptResultCode.SUCCESS)
 
+    def test_minimize2(self):
+        x = amnet.Variable(3, name='x')
+        A = np.array([[1, 2, 3],
+                      [4, 5, 6]])
+        b = np.array([7, -8])
+        f = amnet.atoms.norm1(A*x + b)
+
+        one3 = amnet.Constant(x, 2*np.ones(3))
+        none3 = amnet.Constant(x, -1*np.ones(3))
+
+        obj = opt.Minimize(f)
+        cons = [x <= 2, x >= -1]
+
+        prob = opt.Problem(obj, cons)
+        self.assertTrue(prob.eval_feasible(np.array([0, 0, 0])))
+        self.assertFalse(prob.eval_feasible(np.array([0, 0, -9])))
+
+        result = prob.solve()
+        #print result
+        self.assertTrue(result.code == opt.OptResultCode.SUCCESS)
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestOpt)

@@ -74,24 +74,11 @@ class Constraint(object):
         assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ, Relation.NEQ]
         self.rel = rel
 
-        # lhs must be an Amn
+        # lhs and rhs must be an Amn
         assert isinstance(lhs, amnet.Amn)
         self.lhs = lhs
-
-        # up-convert rhs if necessary
-        if isinstance(rhs, numbers.Real):
-            c = Constant(
-                self,
-                np.repeat(rhs, self.outdim)
-            )
-        elif isinstance(rhs, np.ndarray):
-            self.rhs = rhs
-        elif isinstance(rhs, amnet.Amn):
-            assert rhs.outdim == lhs.outdim
-            pass
-        else:
-            raise TypeError("Invalid call of Constraint(lhs=%s, rhs=%s, rel=%s)" %
-                            (str(lhs), str(rhs), str(rel)))
+        assert isinstance(rhs, amnet.Amn)
+        self.rhs = rhs
 
         # at this point both self.lhs and self.rhs are valid Amn's
         assert self.lhs.outdim == self.rhs.outdim
