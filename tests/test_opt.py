@@ -43,16 +43,21 @@ class TestOpt(unittest.TestCase):
         x = amnet.Variable(3, name='x')
         A = np.array([[1, 2, 3],
                       [4, 5, 6]])
-        b = np.array([7, 8])
+        b = np.array([7, -8])
         f = amnet.atoms.norm1(amnet.Affine(A, x, b))
 
-        one3 = amnet.Constant(x, np.ones(3))
-        none3 = amnet.Constant(x, -np.ones(3))
+        one3 = amnet.Constant(x, 2*np.ones(3))
+        none3 = amnet.Constant(x, -1*np.ones(3))
 
         obj = amnet.opt.Minimize(f)
         cons = [amnet.opt.Constraint(x, one3, amnet.opt.Relation.LE),
-                amnet.opt.Constraint(x, none3, amnet.opt.Relation.GE),]
+                amnet.opt.Constraint(x, none3, amnet.opt.Relation.GE)]
+        #print cons
+
         prob = amnet.opt.Problem(obj, cons)
+        self.assertTrue(prob.eval_feasible(np.array([0, 0, 0])))
+        self.assertFalse(prob.eval_feasible(np.array([0, 0, -9])))
+
         result = prob.solve()
         print result
 

@@ -35,6 +35,9 @@ class Objective(object):
         self.is_negated = (not self.is_negated)
         self.minimize = (not self.minimize)
 
+    def __repr__(self):
+        return "Objective(phi=%s, minimize=%s)" % (repr(self.phi), repr(self.minimize))
+
 
 class Minimize(Objective):
     def __init__(self, phi):
@@ -79,6 +82,9 @@ class Constraint(object):
         assert lhs_variable is rhs_variable, 'LHS and RHS must depend on the same Variable'
         self.variable = lhs_variable
 
+    def __repr__(self):
+        return "Constraint(lhs=%s, rhs=%s, rel=%s)" % (repr(self.lhs), repr(self.rhs), repr(self.rel))
+
 
 ##########
 # Problem
@@ -107,8 +113,9 @@ class OptOptions(object):
     def __init__(self):
         # default options
         self.obj_lo = -float(2**20)
+        #self.obj_lo = float(0)
         self.obj_hi = float(2**20)
-        self.fptol = float(2**-2)
+        self.fptol = float(2**-1)
 
 
 class Problem(object):
@@ -140,6 +147,42 @@ class Problem(object):
         else:
             self.solver = solver
         self.enc_list = []
+
+        # initialize objective and constraint relations into the solver
+        self._init_objective_constraints()
+        self._encode_constraint_relations()
+
+    def eval_feasible(self, xinp):
+        """ returns whether or not xinp satisfies the constraints """
+        assert len(xinp) == self.objective.phi.indim
+        feas = True
+        for constraint in self.constraints:
+            lhsval = constraint.lhs.eval(xinp)
+            rhsval = constraint.rhs.eval(xinp)
+            rel = constraint.rel
+            # TODO: implement fptol here
+            if rel == Relation.LT:
+                feases = [l < r for (l, r) in itertools.izip(lhsval, rhsval)]
+            elif rel == Relation.LE:
+                feases = [l <= r for (l, r) in itertools.izip(lhsval, rhsval)]
+            elif rel == Relation.GT:
+                feases = [l > r for (l, r) in itertools.izip(lhsval, rhsval)]
+            elif rel == Relation.GE:
+                feases = [l >= r for (l, r) in itertools.izip(lhsval, rhsval)]
+            elif rel == Relation.EQ:
+                feases = [l == r for (l, r) in itertools.izip(lhsval, rhsval)]
+            elif rel == Relation.NEQ:
+                feases = [l != r for (l, r) in itertools.izip(lhsval, rhsval)]
+            else:
+                assert False, 'Impossible relation'
+            assert len(lhsval) == len(feases)
+            feas = feas and all(feases)
+
+            # short-circuit
+            if not feas: return feas
+
+        return feas
+
 
     def _init_objective_constraints(self):
         assert self.solver is not None
@@ -180,6 +223,9 @@ class Problem(object):
         assert self.solver is not None
         assert len(self.enc_list) >= 1
 
+        # input variable amn reference
+        x = self.enc_objective.var_of_input()
+
         # Amn instances for this problem are encoded in a particular order
         for i in xrange(len(self.constraints)):
             phi_lhs = self.constraints[i].lhs
@@ -191,12 +237,20 @@ class Problem(object):
             # determine z3 variables
             v_lhs = enc_lhs.var_of(phi_lhs)
             v_rhs = enc_rhs.var_of(phi_rhs)
+            inp_lhs = enc_lhs.var_of_input()
+            inp_rhs = enc_rhs.var_of_input()
             assert len(v_lhs) == len(v_rhs)
             assert len(v_lhs) == phi_lhs.outdim
             assert len(v_lhs) == phi_rhs.outdim
+            assert len(x) == len(inp_lhs) == len(inp_rhs)
 
             # encode the relation
             amnet.util.relv_z3(self.solver, v_lhs, v_rhs, rel)
+
+            # equate all the inputs of all the constraints to the input of the objective
+            amnet.util.eqv_z3(self.solver, x, inp_lhs)
+            amnet.util.eqv_z3(self.solver, x, inp_rhs)
+
 
     def _encode_objective_relation(self, gamma, rel=Relation.LE):
         assert self.solver is not None
@@ -219,26 +273,23 @@ class Problem(object):
         assert lo <= hi
 
         # initialize z3 encoding of objective and constraints
-        self._init_objective_constraints()
-        self._encode_constraint_relations()
+        # self._init_objective_constraints()
+        # self._encode_constraint_relations()
 
-        if check_constraints:
-            result_z3 = self.solver.check()
-            if result_z3 == z3.unsat:
-                return OptResult(
-                    optpoint=None,
-                    optval=None,
-                    code=OptResultCode.INFEASIBLE,
-                    model=None
-                )
-
-        firstrun = True
         result = OptResult(
             optpoint=None,
             optval=None,
             code=OptResultCode.FAILURE,
             model=None
         )
+
+        if check_constraints:
+            result_z3 = self.solver.check()
+            if result_z3 == z3.unsat:
+                result.code = OptResultCode.INFEASIBLE
+                return result
+
+        firstrun = True
 
         while True:
             assert lo <= hi
@@ -253,6 +304,7 @@ class Problem(object):
                     self.solver.pop()
 
             # try an objective value
+            firstrun = False
             assert hi - lo > self.options.fptol
             self.solver.push()
             gamma = (lo + hi) / 2
@@ -260,12 +312,15 @@ class Problem(object):
 
             # bisect
             print 'OPT: trying gamma=%d' % (gamma)
+            #print 'SOLVER: %s' % self.solver
             result_z3 = self.solver.check()
             if result_z3 == z3.sat:
                 print "sat"
-                hi = gamma
 
                 model = self.solver.model()
+
+                #print 'MODEL: %s' % model
+
                 xv = self.enc_objective.var_of_input()
                 f = self.enc_objective.var_of(self.objective.phi)
 
@@ -276,8 +331,20 @@ class Problem(object):
                 result.optval = amnet.util.mfp(model, f[0])
                 result.code = OptResultCode.SUCCESS
                 result.model = model
+
+                # numerical feasibility check
+                #print 'POINT: %s' % result.optpoint
+                assert self.eval_feasible(result.optpoint)
+
+                #print result
+
+                # update bound
+                hi = gamma
+
             elif result_z3 == z3.unsat:
                 print "unsat"
+
+                # update bound
                 lo = gamma
             else:
                 assert False, 'Invalid result from z3'
