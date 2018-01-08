@@ -260,6 +260,7 @@ class Problem(object):
             print 'OPT: trying gamma=%d' % (gamma)
             result_z3 = self.solver.check()
             if result_z3 == z3.sat:
+                print "sat"
                 hi = gamma
 
                 model = self.solver.model()
@@ -274,6 +275,7 @@ class Problem(object):
                 result.code = OptResultCode.SUCCESS
                 result.model = model
             elif result_z3 == z3.unsat:
+                print "unsat"
                 lo = gamma
             else:
                 assert False, 'Invalid result from z3'

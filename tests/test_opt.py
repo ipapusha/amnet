@@ -31,13 +31,14 @@ class TestOpt(unittest.TestCase):
 
     def test_minimize(self):
         x = amnet.Variable(3, name='x')
-        A = np.array([
-            [1, 2, -3],
-            [4, -5, 6],
-            [7, 8, -9],
-            [-1, 0, 2]])
-        b = np.array([1, 2, 3, 4])
-        f = amnet.atoms.norm1(A*x + b)
+        f = amnet.atoms.norm1(x - 2)
+        # A = np.array([
+        #     [1, 2, -3],
+        #     [4, -5, 6],
+        #     [7, 8, -9],
+        #     [-1, 0, 2]])
+        # b = np.array([1, 2, 3, 4])
+        # f = amnet.atoms.norm1(A*x + b)
 
         obj = amnet.opt.Minimize(f)
         cons = []
