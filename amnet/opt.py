@@ -191,7 +191,9 @@ class Problem(object):
             # determine z3 variables
             v_lhs = enc_lhs.var_of(phi_lhs)
             v_rhs = enc_rhs.var_of(phi_rhs)
-            assert len(v_lhs) == len(v_rhs) == len(phi_lhs.outdim) == len(phi_rhs.outdim)
+            assert len(v_lhs) == len(v_rhs)
+            assert len(v_lhs) == phi_lhs.outdim
+            assert len(v_lhs) == phi_rhs.outdim
 
             # encode the relation
             amnet.util.relv_z3(self.solver, v_lhs, v_rhs, rel)

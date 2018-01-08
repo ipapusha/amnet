@@ -30,8 +30,8 @@ class TestOpt(unittest.TestCase):
         #z3.set_param('smt.relevancy', 2)
 
     def test_minimize(self):
-        x = amnet.Variable(3, name='x')
-        f = amnet.atoms.norm1(x - 2)
+        #f = amnet.atoms.norm1(2*x - 2)
+
         # A = np.array([
         #     [1, 2, -3],
         #     [4, -5, 6],
@@ -40,8 +40,18 @@ class TestOpt(unittest.TestCase):
         # b = np.array([1, 2, 3, 4])
         # f = amnet.atoms.norm1(A*x + b)
 
+        x = amnet.Variable(3, name='x')
+        A = np.array([[1, 2, 3],
+                      [4, 5, 6]])
+        b = np.array([7, 8])
+        f = amnet.atoms.norm1(amnet.Affine(A, x, b))
+
+        one3 = amnet.Constant(x, np.ones(3))
+        none3 = amnet.Constant(x, -np.ones(3))
+
         obj = amnet.opt.Minimize(f)
-        cons = []
+        cons = [amnet.opt.Constraint(x, one3, amnet.opt.Relation.LE),
+                amnet.opt.Constraint(x, none3, amnet.opt.Relation.GE),]
         prob = amnet.opt.Problem(obj, cons)
         result = prob.solve()
         print result
