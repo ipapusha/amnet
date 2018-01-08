@@ -1,5 +1,6 @@
 import numpy as np
 import amnet.atoms as atoms
+from amnet.opt import Constraint, Relation
 import numbers
 
 
@@ -52,12 +53,16 @@ class Amn(object):
         else:
             raise TypeError("Invalid slice type.")
 
+    ###################
     # unary operations
+    ###################
     def __neg__(self):
         assert self._is_derived_instance()
         return atoms.negate(self)
 
+    ####################
     # binary operations
+    ####################
     def __add__(self, other):
         assert self._is_derived_instance()
         phi_other = atoms.vectorize_to(self, other)
@@ -121,6 +126,39 @@ class Amn(object):
 
         else:
             raise TypeError("Invalid overload while calling %s.__rmul__(%s)" % (repr(self), repr(other)))
+
+    ##################################
+    # comparisons create a constraint
+    ##################################
+    def __lt__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.LT)
+
+    def __le__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.LE)
+
+    def __eq__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.EQ)
+
+    def __ne__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.NEQ)
+
+    def __ge__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.GE)
+
+    def __gt__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.GT)
 
 
 class Variable(Amn):
