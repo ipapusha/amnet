@@ -99,6 +99,9 @@ class OptResult(object):
         self.code = code
         self.model = model
 
+    def __repr__(self):
+        return "OptResult(optval=%s, optpoint=%s, code=%s, model=%s)" % (repr(self.optval), repr(self.optpoint), repr(self.code), repr(self.model))
+
 
 class OptOptions(object):
     def __init__(self):
@@ -227,29 +230,25 @@ class Problem(object):
                     model=None
                 )
 
+        firstrun = True
+        result = OptResult(
+            optpoint=None,
+            optval=None,
+            code=OptResultCode.FAILURE,
+            model=None
+        )
+
         while True:
             assert lo <= hi
 
             if (hi - lo) <= self.options.fptol:
                 # done with bisection
                 # TODO: implement unboundedness check
-                model = self.solver.model()
-                xv = self.enc_objective.var_of_input()
-                f = self.enc_objective.var_of(self.objective.phi)
-                assert len(xv) == self.variable.outdim
-                assert len(f) == 1
-
-                retval.x = amnet.util.mfpv(model, xv)
-                retval.xp = amnet.util.mfpv(model, xp)
-                return OptResult(
-                    optpoint=amnet.util.mfpv(model, xv),
-                    optval=amnet.util.mfp(model, f[0]),
-                    code=OptResultCode.SUCCESS,
-                    model=model
-                )
+                return result
             else:
                 # reset solver state
-                self.solver.pop()
+                if not firstrun:
+                    self.solver.pop()
 
             # try an objective value
             assert hi - lo > self.options.fptol
@@ -262,6 +261,18 @@ class Problem(object):
             result_z3 = self.solver.check()
             if result_z3 == z3.sat:
                 hi = gamma
+
+                model = self.solver.model()
+                xv = self.enc_objective.var_of_input()
+                f = self.enc_objective.var_of(self.objective.phi)
+
+                assert len(xv) == self.variable.outdim
+                assert len(f) == 1
+
+                result.optpoint = amnet.util.mfpv(model, xv)
+                result.optval = amnet.util.mfp(model, f[0])
+                result.code = OptResultCode.SUCCESS
+                result.model = model
             elif result_z3 == z3.unsat:
                 lo = gamma
             else:
