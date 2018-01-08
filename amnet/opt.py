@@ -93,10 +93,11 @@ class OptResultCode(Enum):
 
 
 class OptResult(object):
-    def __init__(self, optval, optpoint, code=OptResultCode.SUCCESS):
+    def __init__(self, optval, optpoint, code=OptResultCode.SUCCESS, model=None):
         self.optval = optval
         self.optpoint = optpoint
         self.code = code
+        self.model = model
 
 
 class OptOptions(object):
@@ -104,7 +105,7 @@ class OptOptions(object):
         # default options
         self.obj_lo = -float(2**20)
         self.obj_hi = float(2**20)
-        self.fptol = float(2**-9)
+        self.fptol = float(2**-2)
 
 
 class Problem(object):
@@ -137,7 +138,7 @@ class Problem(object):
             self.solver = solver
         self.enc_list = []
 
-    def _encode_objective_constraints(self):
+    def _init_objective_constraints(self):
         assert self.solver is not None
         assert self.objective.phi.outdim == 1
 
@@ -181,7 +182,7 @@ class Problem(object):
             phi_lhs = self.constraints[i].lhs
             phi_rhs = self.constraints[i].rhs
             enc_lhs = self.enc_lhs_list[i]
-            enc_rhs = self.enc_lhs_list[i]
+            enc_rhs = self.enc_rhs_list[i]
             rel = self.constraints[i].rel
 
             # determine z3 variables
@@ -204,9 +205,67 @@ class Problem(object):
         # encode the relation
         amnet.util.relv_z3(self.solver, v_obj, v_obj_rhs, rel)
 
-    def _bisection_minimize(self):
+    def _bisection_minimize(self, check_constraints=True):
         assert self.objective.minimize
-        pass
+
+        # initialize lo and hi
+        lo = self.options.obj_lo
+        hi = self.options.obj_hi
+        assert lo <= hi
+
+        # initialize z3 encoding of objective and constraints
+        self._init_objective_constraints()
+        self._encode_constraint_relations()
+
+        if check_constraints:
+            result_z3 = self.solver.check()
+            if result_z3 == z3.unsat:
+                return OptResult(
+                    optpoint=None,
+                    optval=None,
+                    code=OptResultCode.INFEASIBLE,
+                    model=None
+                )
+
+        while True:
+            assert lo <= hi
+
+            if (hi - lo) <= self.options.fptol:
+                # done with bisection
+                # TODO: implement unboundedness check
+                model = self.solver.model()
+                xv = self.enc_objective.var_of_input()
+                f = self.enc_objective.var_of(self.objective.phi)
+                assert len(xv) == self.variable.outdim
+                assert len(f) == 1
+
+                retval.x = amnet.util.mfpv(model, xv)
+                retval.xp = amnet.util.mfpv(model, xp)
+                return OptResult(
+                    optpoint=amnet.util.mfpv(model, xv),
+                    optval=amnet.util.mfp(model, f[0]),
+                    code=OptResultCode.SUCCESS,
+                    model=model
+                )
+            else:
+                # reset solver state
+                self.solver.pop()
+
+            # try an objective value
+            assert hi - lo > self.options.fptol
+            self.solver.push()
+            gamma = (lo + hi) / 2
+            self._encode_objective_relation(gamma, rel=Relation.LE)
+
+            # bisect
+            print 'OPT: trying gamma=%d' % (gamma)
+            result_z3 = self.solver.check()
+            if result_z3 == z3.sat:
+                hi = gamma
+            elif result_z3 == z3.unsat:
+                lo = gamma
+            else:
+                assert False, 'Invalid result from z3'
 
     def _bisection_maximize(self):
         # XXX: default implementation: negate the objective and minimize instead
