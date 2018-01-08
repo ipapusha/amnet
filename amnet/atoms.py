@@ -1,5 +1,6 @@
 import numpy as np
 import amnet
+import numbers
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # The #1 RULE for this module (not enforced, though I wish it could be enforced
@@ -117,6 +118,47 @@ def thread_over(f, *args):
 
     # return a stack of all components
     return from_list(outputs)
+
+
+# operation on other Amns
+def vectorize_to(phi_template, obj, phi_from=None):
+    """
+    Returns an up-dimensioned object obj.
+        phi_template, phi_from should both be AMNs
+        obj can be a real number, numpy array, or AMN.
+    Always returns an AMN that can be added to phi_template
+    """
+    assert phi_template.outdim >= 1
+
+    # input variable of phi_other
+    if phi_from is None:
+        phi_from = phi_template
+    assert phi_from.outdim >= 1
+
+    # updimensioning logic
+    if isinstance(obj, numbers.Real):
+        ret = amnet.Constant(
+            phi_from,
+            np.repeat(obj, phi_template.outdim)
+        )
+    elif isinstance(obj, np.ndarray):
+        if not (obj.shape == (phi_template.outdim,)):
+            raise ValueError("Dimension mismatch vectorizing an array.")
+        ret = amnet.Constant(
+            phi_from,
+            obj
+        )
+    elif isinstance(obj, amnet.Amn):
+        if not (obj.outdim == phi_template.outdim):
+            raise ValueError("Dimension mismatch between AMNs.")
+        ret = obj
+    else:
+        raise TypeError("Invalid vectorize obj.")
+
+    assert phi_from.indim == phi_template.indim
+    assert ret.indim == phi_from.indim
+    assert ret.outdim == phi_template.outdim
+    return ret
 
 
 ################################################################################

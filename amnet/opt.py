@@ -1,5 +1,7 @@
 from __future__ import division
 
+import numbers
+
 import numpy as np
 import amnet
 import z3
@@ -68,17 +70,37 @@ class Constraint(object):
     and ensures dimensionality coherence between the lhs and rhs
     """
     def __init__(self, lhs, rhs, rel):
-        assert lhs.outdim == rhs.outdim
-        assert lhs.outdim >= 1
+        # supported relations
         assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ, Relation.NEQ]
-        self.lhs = lhs
-        self.rhs = rhs
         self.rel = rel
+
+        # lhs must be an Amn
+        assert isinstance(lhs, amnet.Amn)
+        self.lhs = lhs
+
+        # up-convert rhs if necessary
+        if isinstance(rhs, numbers.Real):
+            c = Constant(
+                self,
+                np.repeat(rhs, self.outdim)
+            )
+        elif isinstance(rhs, np.ndarray):
+            self.rhs = rhs
+        elif isinstance(rhs, amnet.Amn):
+            assert rhs.outdim == lhs.outdim
+            pass
+        else:
+            raise TypeError("Invalid call of Constraint(lhs=%s, rhs=%s, rel=%s)" %
+                            (str(lhs), str(rhs), str(rel)))
+
+        # at this point both self.lhs and self.rhs are valid Amn's
+        assert self.lhs.outdim == self.rhs.outdim
+        assert self.lhs.outdim >= 1
 
         # cache input variable reference
         # XXX: possibly move this check into the problem creation routines
-        lhs_variable = amnet.tree.unique_leaf_of(lhs)
-        rhs_variable = amnet.tree.unique_leaf_of(rhs)
+        lhs_variable = amnet.tree.unique_leaf_of(self.lhs)
+        rhs_variable = amnet.tree.unique_leaf_of(self.rhs)
         assert lhs_variable is rhs_variable, 'LHS and RHS must depend on the same Variable'
         self.variable = lhs_variable
 
