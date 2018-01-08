@@ -1,6 +1,7 @@
 import numpy as np
 import amnet
 import amnet.opt as opt
+import amnet.atoms as atoms
 
 import sys
 import unittest
@@ -84,6 +85,23 @@ class TestOpt(unittest.TestCase):
         #print result
         self.assertTrue(result.code == opt.OptResultCode.SUCCESS)
 
+    def test_minimize3(self):
+        # minimize a nonconvex function
+        c1 = np.array([1, 2])
+        c2 = np.array([-4, 4])
+
+        x = amnet.Variable(2, name='x')
+        f1 = atoms.norm1(x - c1)
+        f2 = atoms.norm1(x - c2)
+        f = atoms.min_list([f1, f2])
+
+        obj = opt.Minimize(f)
+        cons = [atoms.norm1(x) >= 10]
+        prob = opt.Problem(obj, cons)
+
+        result = prob.solve()
+        print result
+        self.assertTrue(result.code == opt.OptResultCode.SUCCESS)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestOpt)
