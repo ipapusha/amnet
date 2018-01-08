@@ -3,6 +3,7 @@ import numpy as np
 import z3
 from itertools import izip
 from fractions import Fraction
+from amnet.opt import Relation
 
 
 ################################################################################
@@ -83,6 +84,12 @@ def eqv_z3(solver, var, arr):
         solver.add(v_i == arr_i)
 
 
+def neqv_z3(solver, var, arr):
+    """adds the constraints {var[i] != arr[i], i = 1..n} to solver """
+    assert len(var) == len(arr)
+    for v_i, arr_i in izip(var, arr):
+        solver.add(v_i != arr_i)
+
 def leqv_z3(solver, var, arr):
     """adds the constraints {var[i] <= arr[i], i = 1..n} to solver """
     assert len(var) == len(arr)
@@ -103,11 +110,36 @@ def geqv_z3(solver, var, arr):
     for v_i, arr_i in izip(var, arr):
         solver.add(v_i >= arr_i)
 
+
 def gtv_z3(solver, var, arr):
     """adds the constraints {var[i] > arr[i], i = 1..n} to solver """
     assert len(var) == len(arr)
     for v_i, arr_i in izip(var, arr):
         solver.add(v_i > arr_i)
+
+
+def relv_z3(solver, var, arr, rel):
+    """
+    adds the constraints {var[i] rel arr[i], i = 1..n} to solver,
+    where rel is one of the instances of Relation
+    """
+    assert len(var) == len(arr)
+    assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ, Relation.NEQ]
+
+    if rel == Relation.LT:
+        ltv_z3(solver, var, arr)
+    elif rel == Relation.LE:
+        leqv_z3(solver, var, arr)
+    elif rel == Relation.GT:
+        gtv_z3(solver, var, arr)
+    elif rel == Relation.GE:
+        geqv_z3(solver, var, arr)
+    elif rel == Relation.EQ:
+        eqv_z3(solver, var, arr)
+    elif rel == Relation.NEQ:
+        neqv_z3(solver, var, arr)
+    else:
+        assert False, 'Impossible relation'
 
 
 def is_nonempty_vector_z3(xs):

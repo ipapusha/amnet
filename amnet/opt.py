@@ -159,6 +159,7 @@ class Problem(object):
         )
         assert len(enc_list) == len(amn_list)
         assert len(enc_list) >= 1
+        assert all([enc.solver is self.solver for enc in enc_list])
 
         # set the encoder lists after encoding from Smt encoder
         self.enc_list = enc_list
@@ -189,35 +190,19 @@ class Problem(object):
             assert len(v_lhs) == len(v_rhs) == len(phi_lhs.outdim) == len(phi_rhs.outdim)
 
             # encode the relation
-            if rel == Relation.LT:
-                pass
-            elif rel == Relation.LE:
-                pass
-            elif rel == Relation.GT:
-                pass
-            elif rel == Relation.GE:
-                pass
-            elif rel == Relation.EQ:
-                pass
-            elif rel == Relation.NEQ:
-                assert False, 'NEQ relation not implemented'
-            else:
-                assert False, 'Impossible relation'
+            amnet.util.relv_z3(self.solver, v_lhs, v_rhs, rel)
 
-
-    def _encode_objective_relation(self, gamma):
-        pass
-
-    def _constraint_encoder(self):
-        """ constraints are always encoded """
+    def _encode_objective_relation(self, gamma, rel=Relation.LE):
         assert self.solver is not None
-        if len(self.constraints) >= 1:
-            enc_list = amnet.smt.SmtEncoder.multiple_encoders_for()
-        else:
-            return None
+        assert len(self.enc_list) >= 1
 
-    def _encode_objective(self, gamma):
-        pass
+        # determine z3 variables to compare
+        v_obj = self.enc_objective.var_of(self.objective.phi)
+        v_obj_rhs = np.array([gamma])
+        assert len(v_obj) == 1
+
+        # encode the relation
+        amnet.util.relv_z3(self.solver, v_obj, v_obj_rhs, rel)
 
     def _bisection_minimize(self):
         assert self.objective.minimize
