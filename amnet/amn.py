@@ -1,6 +1,7 @@
 import numpy as np
 import amnet.atoms as atoms
-from amnet.opt import Constraint, Relation
+from amnet.opt import Constraint
+from amnet.util import Relation
 import numbers
 
 
@@ -154,7 +155,7 @@ class Amn(object):
     def __ne__(self, other):
         assert self._is_derived_instance()
         phi_other = atoms.vectorize_to(self, other)
-        return Constraint(self, phi_other, rel=Relation.NEQ)
+        return Constraint(self, phi_other, rel=Relation.NE)
 
     def __ge__(self, other):
         assert self._is_derived_instance()

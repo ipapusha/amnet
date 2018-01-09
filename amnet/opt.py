@@ -1,12 +1,12 @@
 from __future__ import division
 
-import numbers
+import itertools
+from enum import Enum
 
 import numpy as np
 import amnet
+from amnet.util import Relation
 import z3
-from enum import Enum
-import itertools
 
 ################################################################################
 # Classes and routines related to Multiplexing Programming with AMNs
@@ -55,15 +55,6 @@ class Maximize(Objective):
 # Constraints
 ##############
 
-class Relation(Enum):
-    LT = 1  # <
-    LE = 2  # <=
-    GT = 3  # >
-    GE = 4  # >=
-    EQ = 5  # ==
-    NEQ = 6  # !=
-
-
 class Constraint(object):
     """
     Class that keeps track of the lhs, rhs, the type of relation,
@@ -71,7 +62,7 @@ class Constraint(object):
     """
     def __init__(self, lhs, rhs, rel):
         # supported relations
-        assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ, Relation.NEQ]
+        assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ, Relation.NE]
         self.rel = rel
 
         # lhs and rhs must be an Amn
@@ -105,26 +96,32 @@ class OptResultCode(Enum):
     INFEASIBLE = 3
     UNBOUNDED_BELOW = 4  # not yet implemented
     UNBOUNDED_ABOVE = 5  # not yet implemented
+    MAX_ITER = 6
 
 
 class OptResult(object):
-    def __init__(self, optval, optpoint, code=OptResultCode.SUCCESS, model=None):
-        self.optval = optval
-        self.optpoint = optpoint
-        self.code = code
+    def __init__(self, objval, value, code=OptResultCode.SUCCESS, model=None):
+        self.objval = objval
+        self.value = value
+        self.status = code
         self.model = model
 
     def __repr__(self):
-        return "OptResult(optval=%s, optpoint=%s, code=%s, model=%s)" % (repr(self.optval), repr(self.optpoint), repr(self.code), repr(self.model))
+        return "OptResult(objval=%s, value=%s, status=%s, model=%s)" % \
+               (repr(self.objval),
+                repr(self.value),
+                repr(self.status),
+                repr(self.model))
 
 
 class OptOptions(object):
     def __init__(self):
         # default options
         self.obj_lo = -float(2**20)
-        #self.obj_lo = float(0)
         self.obj_hi = float(2**20)
         self.fptol = float(2**-1)
+        self.verbosity = 2
+        self.max_iter = 100
 
 
 class Problem(object):
@@ -180,7 +177,7 @@ class Problem(object):
                 feases = [l >= r for (l, r) in itertools.izip(lhsval, rhsval)]
             elif rel == Relation.EQ:
                 feases = [l == r for (l, r) in itertools.izip(lhsval, rhsval)]
-            elif rel == Relation.NEQ:
+            elif rel == Relation.NE:
                 feases = [l != r for (l, r) in itertools.izip(lhsval, rhsval)]
             else:
                 assert False, 'Impossible relation'
@@ -191,7 +188,6 @@ class Problem(object):
             if not feas: return feas
 
         return feas
-
 
     def _init_objective_constraints(self):
         assert self.solver is not None
@@ -260,7 +256,6 @@ class Problem(object):
             amnet.util.eqv_z3(self.solver, x, inp_lhs)
             amnet.util.eqv_z3(self.solver, x, inp_rhs)
 
-
     def _encode_objective_relation(self, gamma, rel=Relation.LE):
         assert self.solver is not None
         assert len(self.enc_list) >= 1
@@ -286,8 +281,8 @@ class Problem(object):
         # self._encode_constraint_relations()
 
         result = OptResult(
-            optpoint=None,
-            optval=None,
+            value=None,
+            objval=None,
             code=OptResultCode.FAILURE,
             model=None
         )
@@ -295,36 +290,56 @@ class Problem(object):
         if check_constraints:
             result_z3 = self.solver.check()
             if result_z3 == z3.unsat:
-                result.code = OptResultCode.INFEASIBLE
+                result.status = OptResultCode.INFEASIBLE
                 return result
 
-        firstrun = True
+        iter_ctr = 0
+
+        if self.options.verbosity >= 1:
+            print
+            print '{:3s} | {:11} | {:11} | {:11} | {:5} | {:11} | {:11} '.format(
+                'itr', 'lo', 'hi', 'gam', 'res', 'obj', 'feas'
+            )
+            print '='*79
 
         while True:
             assert lo <= hi
+            iter_ctr += 1
 
-            if (hi - lo) <= self.options.fptol:
-                # done with bisection
-                # TODO: implement unboundedness check
+            # give up if the number of iterations exceeded maximum
+            if iter_ctr > self.options.max_iter:
+                result.status = OptResultCode.MAX_ITER
+                if self.options.verbosity >= 1:
+                    print "Max iterations reached."
                 return result
-            else:
-                # reset solver state
-                if not firstrun:
-                    self.solver.pop()
+
+            # done with bisection, exit with last valid model
+            # TODO: implement unboundedness check
+            if (hi - lo) <= self.options.fptol:
+                if self.options.verbosity >= 1:
+                    print "Solution found."
+                    print "  objval: {:f}".format(result.objval)
+                if self.options.verbosity >= 2:
+                    print '   point:', result.value
+                return result
+
+            # reset solver state to remove last obj <= gamma constraint
+            if iter_ctr > 1:
+                self.solver.pop()
 
             # try an objective value
-            firstrun = False
             assert hi - lo > self.options.fptol
             self.solver.push()
             gamma = (lo + hi) / 2
             self._encode_objective_relation(gamma, rel=Relation.LE)
 
             # bisect
-            print 'OPT: trying gamma=%d' % (gamma)
+            #print 'OPT: trying gamma=%d' % (gamma)
+            print '{:>3d} | {:11.5g} | {:11.5g} | {:11.5g} |'.format(iter_ctr, lo, hi, gamma),
             #print 'SOLVER: %s' % self.solver
             result_z3 = self.solver.check()
             if result_z3 == z3.sat:
-                print "sat"
+                print '{:5} |'.format('sat'),
 
                 model = self.solver.model()
 
@@ -336,22 +351,23 @@ class Problem(object):
                 assert len(xv) == self.variable.outdim
                 assert len(f) == 1
 
-                result.optpoint = amnet.util.mfpv(model, xv)
-                result.optval = amnet.util.mfp(model, f[0])
-                result.code = OptResultCode.SUCCESS
+                result.value = amnet.util.mfpv(model, xv)
+                result.objval = amnet.util.mfp(model, f[0])
+                result.status = OptResultCode.SUCCESS
                 result.model = model
 
                 # numerical feasibility check
-                #print 'POINT: %s' % result.optpoint
-                assert self.eval_feasible(result.optpoint)
+                is_feas = self.eval_feasible(result.value)
+                assert is_feas
 
-                #print result
+                print '{:11.5g} | {} '.format(result.objval, is_feas)
 
                 # update bound
                 hi = gamma
 
             elif result_z3 == z3.unsat:
-                print "unsat"
+                print '{:5} |'.format('unsat'),
+                print '{:11} | {} '.format(result.objval, False)
 
                 # update bound
                 lo = gamma

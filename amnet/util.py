@@ -1,9 +1,23 @@
 from __future__ import division
+
+from itertools import izip
+from enum import Enum
+from fractions import Fraction
+
 import numpy as np
 import z3
-from itertools import izip
-from fractions import Fraction
-from amnet.opt import Relation
+
+
+################################################################################
+# useful Enums
+################################################################################
+class Relation(Enum):
+    LT = 1  # <
+    LE = 2  # <=
+    GT = 3  # >
+    GE = 4  # >=
+    EQ = 5  # ==
+    NE = 6  # !=
 
 
 ################################################################################
@@ -124,7 +138,7 @@ def relv_z3(solver, var, arr, rel):
     where rel is one of the instances of Relation
     """
     assert len(var) == len(arr)
-    assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ, Relation.NEQ]
+    assert rel in [Relation.LT, Relation.LE, Relation.GT, Relation.GE, Relation.EQ, Relation.NE]
 
     if rel == Relation.LT:
         ltv_z3(solver, var, arr)
@@ -136,7 +150,7 @@ def relv_z3(solver, var, arr, rel):
         geqv_z3(solver, var, arr)
     elif rel == Relation.EQ:
         eqv_z3(solver, var, arr)
-    elif rel == Relation.NEQ:
+    elif rel == Relation.NE:
         neqv_z3(solver, var, arr)
     else:
         assert False, 'Impossible relation'

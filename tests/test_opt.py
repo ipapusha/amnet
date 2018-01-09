@@ -62,7 +62,7 @@ class TestOpt(unittest.TestCase):
 
         result = prob.solve()
         #print result
-        self.assertTrue(result.code == opt.OptResultCode.SUCCESS)
+        self.assertTrue(result.status == opt.OptResultCode.SUCCESS)
 
     def test_minimize2(self):
         x = amnet.Variable(3, name='x')
@@ -83,7 +83,7 @@ class TestOpt(unittest.TestCase):
 
         result = prob.solve()
         #print result
-        self.assertTrue(result.code == opt.OptResultCode.SUCCESS)
+        self.assertTrue(result.status == opt.OptResultCode.SUCCESS)
 
     def test_minimize3(self):
         # minimize a nonconvex function
@@ -100,8 +100,8 @@ class TestOpt(unittest.TestCase):
         prob = opt.Problem(obj, cons)
 
         result = prob.solve()
-        print result
-        self.assertTrue(result.code == opt.OptResultCode.SUCCESS)
+        #print result
+        self.assertTrue(result.status == opt.OptResultCode.SUCCESS)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestOpt)
