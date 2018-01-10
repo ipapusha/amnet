@@ -103,6 +103,7 @@ class TestOpt(unittest.TestCase):
         #print result
         self.assertTrue(result.status == opt.OptResultCode.SUCCESS)
 
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestOpt)
     result = unittest.TextTestRunner(verbosity=2).run(suite)

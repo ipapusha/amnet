@@ -358,7 +358,7 @@ class Problem(object):
 
                 # numerical feasibility check
                 is_feas = self.eval_feasible(result.value)
-                assert is_feas
+                #assert is_feas
 
                 print '{:11.5g} | {} '.format(result.objval, is_feas)
 
