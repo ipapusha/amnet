@@ -61,15 +61,25 @@ class TestTree(unittest.TestCase):
         # depending on implementation of max
         # self.assertEqual(len(desc), 17)
         self.assertGreaterEqual(len(desc), 9)
-        self.assertTrue(xyz in desc)
-        self.assertTrue(x in desc)
-        self.assertTrue(yz in desc)
-        self.assertTrue(maxyz in desc)
-        self.assertTrue(twoxp1 in desc)
-        self.assertTrue(twox in desc)
-        self.assertTrue(threex in desc)
-        self.assertTrue(fivexp1 in desc)
-        self.assertTrue(phi in desc)
+
+        # self.assertTrue(xyz in desc)
+        # self.assertTrue(x in desc)
+        # self.assertTrue(yz in desc)
+        # self.assertTrue(maxyz in desc)
+        # self.assertTrue(twoxp1 in desc)
+        # self.assertTrue(twox in desc)
+        # self.assertTrue(threex in desc)
+        # self.assertTrue(fivexp1 in desc)
+        # self.assertTrue(phi in desc)
+        self.assertTrue(amnet.tree.is_element_of(xyz, desc))
+        self.assertTrue(amnet.tree.is_element_of(x, desc))
+        self.assertTrue(amnet.tree.is_element_of(yz, desc))
+        self.assertTrue(amnet.tree.is_element_of(maxyz, desc))
+        self.assertTrue(amnet.tree.is_element_of(twoxp1, desc))
+        self.assertTrue(amnet.tree.is_element_of(twox, desc))
+        self.assertTrue(amnet.tree.is_element_of(threex, desc))
+        self.assertTrue(amnet.tree.is_element_of(fivexp1, desc))
+        self.assertTrue(amnet.tree.is_element_of(phi, desc))
 
         # descendants list must contain unique pointers
         self.assertEqual(
@@ -82,6 +92,21 @@ class TestTree(unittest.TestCase):
             len([d for d in desc if isinstance(d, amnet.Variable)]),
             1
         )
+
+        # determine that variable
+        v = amnet.tree.unique_leaf_of(phi)
+        self.assertTrue(v is xyz)
+        self.assertTrue(isinstance(v, amnet.Variable))
+        self.assertEqual(v.outdim, 3)
+        self.assertEqual(v.indim, 3)
+
+        # determine the other variables
+        for psi in [xyz, x, yz, maxyz, twoxp1, twox, threex, fivexp1, phi]:
+            v = amnet.tree.unique_leaf_of(psi)
+            self.assertTrue(v is xyz)
+            self.assertTrue(isinstance(v, amnet.Variable))
+            self.assertEqual(v.outdim, 3)
+            self.assertEqual(v.indim, 3)
 
         # this dag has only one mu
         self.assertEqual(

@@ -75,6 +75,17 @@ def children(phi):
     return ret
 
 
+def is_element_of(node, lst):
+    """
+    equivalent to `node in lst`,
+    except uses `is` comparison, instead of `is` or `==`
+    """
+    for k in lst:
+        if node is k:
+            return True
+    return False
+
+
 def descendants(phi):
     """
     returns a list of all descendants of phi,
@@ -88,14 +99,34 @@ def descendants(phi):
         # cannot use not(node in d) because Python's `in`
         # checks for `==` or `is` equality;
         # we want only `is` equality
-        if not(any(node is e for e in d)):
+        #if not(any(node is e for e in d)):
+        if not is_element_of(node, d):
             # node is new
             d.append(node)
             # add its children to check for reachability
-            q.extend([c for c in children(node) if c not in d])
+            #q.extend([c for c in children(node) if c not in d])
+            q.extend([c for c in children(node) if not is_element_of(c, d)])
 
     # done finding reachable nodes
     return d
+
+
+def leaves_of(phi):
+    """
+    returns a list of all variables in the graph of phi
+    """
+    return [d for d in descendants(phi)
+            if isinstance(d, amnet.Variable)]
+
+
+def unique_leaf_of(phi):
+    """
+    returns the variable associated with phi (assuming there is only one)
+    """
+    vs = leaves_of(phi)
+    assert len(vs) == 1
+    assert isinstance(vs[0], amnet.Variable)
+    return vs[0]
 
 
 def valid_tree(phi):

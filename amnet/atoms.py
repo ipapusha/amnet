@@ -1,5 +1,12 @@
 import numpy as np
 import amnet
+import numbers
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# The #1 RULE for this module (not enforced, though I wish it could be enforced
+# with a static code analysis tool (TODO: implement such a tool)) is this:
+# Do not use AMN overloaded operators when defining atomic operations.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 ################################################################################
@@ -20,6 +27,47 @@ def select(phi, k):
         np.eye(1, phi.outdim, k),
         phi
     )
+
+
+def select_indices(phi, indices):
+    """ returns the components of phi given by the indices list """
+    assert phi.outdim >= 1
+    assert not(isinstance(indices, slice))
+
+    # dimensions
+    n = phi.outdim
+    m = len(indices)
+
+    # bounds checking
+    assert all([(0 <= i < n) for i in indices])
+    assert m >= 1
+
+    # optimization: prevent creating an affine transformation
+    #               if phi is one-dimensional
+    if phi.outdim == 1 and m == 1 and indices[0] == 0:
+        return phi
+
+    # select appropriate components
+    W = np.concatenate(
+        [np.eye(1, n, i) for i in indices],
+        axis=0
+    )
+    assert W.shape == (m, n)
+
+    return amnet.Linear(
+        W,
+        phi
+    )
+
+
+def select_slice(phi, sl):
+    """ returns the components of phi given by the slice """
+    assert phi.outdim >= 1
+    assert isinstance(sl, slice)
+
+    n = phi.outdim
+    indices = range(*sl.indices(n))
+    return select_indices(phi, indices)
 
 
 def to_list(phi):
@@ -70,6 +118,47 @@ def thread_over(f, *args):
 
     # return a stack of all components
     return from_list(outputs)
+
+
+# operation on other Amns
+def vectorize_to(phi_template, obj, phi_from=None):
+    """
+    Returns an up-dimensioned object obj.
+        phi_template, phi_from should both be AMNs
+        obj can be a real number, numpy array, or AMN.
+    Always returns an AMN that can be added to phi_template
+    """
+    assert phi_template.outdim >= 1
+
+    # input variable of phi_other
+    if phi_from is None:
+        phi_from = phi_template
+    assert phi_from.outdim >= 1
+
+    # updimensioning logic
+    if isinstance(obj, numbers.Real):
+        ret = amnet.Constant(
+            phi_from,
+            np.repeat(obj, phi_template.outdim)
+        )
+    elif isinstance(obj, np.ndarray):
+        if not (obj.shape == (phi_template.outdim,)):
+            raise ValueError("Dimension mismatch vectorizing an array.")
+        ret = amnet.Constant(
+            phi_from,
+            obj
+        )
+    elif isinstance(obj, amnet.Amn):
+        if not (obj.outdim == phi_template.outdim):
+            raise ValueError("Dimension mismatch between AMNs.")
+        ret = obj
+    else:
+        raise TypeError("Invalid vectorize obj.")
+
+    assert phi_from.indim == phi_template.indim
+    assert ret.indim == phi_from.indim
+    assert ret.outdim == phi_template.outdim
+    return ret
 
 
 ################################################################################
@@ -249,6 +338,7 @@ def norminf(phi):
         for k in range(phi.outdim)]
     )
 
+
 def relu_old(phi):
     """
     returns vector with ith component equal to max(phi_i, 0)
@@ -392,6 +482,11 @@ def add2(x, y):
     n = x.outdim
 
     # OPTIMIZATION: special case for constants
+    if isinstance(x, amnet.Constant) and isinstance(y, amnet.Constant):
+        return amnet.Constant(
+            x.x,
+            x.b + y.b
+        )
     if isinstance(y, amnet.Constant):
         return amnet.Affine(
             np.eye(n),
@@ -431,6 +526,11 @@ def sub2(x, y):
     n = x.outdim
 
     # OPTIMIZATION: special case for constants
+    if isinstance(x, amnet.Constant) and isinstance(y, amnet.Constant):
+        return amnet.Constant(
+            x.x,
+            x.b - y.b
+        )
     if isinstance(y, amnet.Constant):
         return amnet.Affine(
             np.eye(n),

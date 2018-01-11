@@ -6,16 +6,34 @@
 
 # Trees
 - [x] Add the vgc atom
-- [ ] Greedy simplification routines (across linear and stack)
+- [X] Greedy simplification routines (across linear and stack)
 - [ ] Fix issues in the tracker
-- [ ] efficient `relu_aff` atom (combine relu() and Affine())
+- [X] efficient `relu_aff` atom (combine relu() and Affine())
       (niklas)
 - [ ] efficient `relu_nn` atom (full relu nn) (niklas)
 - [ ] implement `compose_rewire`
 
+# Operator overloads
+- [ ] implement `__matmul__` operator (@) instead of *
+- [ ] add divide and true divide
+- [ ] add negative indexing for integer indices (not just extended slices)
+- [ ] determine if lvalue references and iadds make sense
+      e.g., `__setitem__`
+
+# Tree Simplifications
+- [ ] Replace all constants to derive from the smallest dimension
+- [ ] Simplify matrix multiplies recursively if they result in a smaller
+      dimension
+- [ ] Remove identity operations
+- [ ] Precompute constants offline
+- [ ] Group select operations to refer to the same nodes
+- [ ] Propagate negations and constant-multiplies
+
+# Key features
+- [ ] Move from numpy to rational arithmetic
 
 # Examples
-- [ ] rewrite `example_vgc` (in particular, remove `stack()`,
+- [X] rewrite `example_vgc` (in particular, remove `stack()`,
 	  because there is now a `Stack` class)
 
 # Training

@@ -1,4 +1,8 @@
 import numpy as np
+import amnet.atoms as atoms
+from amnet.opt import Constraint
+from amnet.util import Relation
+import numbers
 
 
 ################################################################################
@@ -7,14 +11,161 @@ import numpy as np
 
 class Amn(object):
     """
-    Abstract class that every AMN node must implement.
+    Every affine multiplexing network node descends from Amn.
     """
+    # allows operators defined in this class to override
+    # numpy's operators when interacting with numpy objects
+    __array_priority__ = 200
+
     def __init__(self, outdim=0, indim=0):
         self.outdim = outdim
         self.indim = indim
 
     def eval(self, inp):
         return NotImplemented
+
+    def _is_derived_instance(self):
+        """
+        returns True if the object is an instance of one of the
+        recognized direct subclasses of Amn
+        """
+        return any([
+            isinstance(self, cls) for cls in [
+                Variable, Affine, Mu, Stack
+            ]
+        ])
+
+    # array operations
+    def __len__(self):
+        return self.outdim
+
+    def __getitem__(self, item):
+        # we should not be slicing into the abstract class
+        assert self._is_derived_instance()
+
+        if isinstance(item, slice):
+            return atoms.select_slice(self, item)
+
+        elif isinstance(item, int):
+            if not(0 <= item < len(self)):
+                raise IndexError("Invalid index.")
+            return atoms.select(self, item)
+
+        else:
+            raise TypeError("Invalid slice type.")
+
+    ###################
+    # unary operations
+    ###################
+    def __neg__(self):
+        assert self._is_derived_instance()
+        return atoms.negate(self)
+
+    ####################
+    # binary operations
+    ####################
+    def __add__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return atoms.add2(self, phi_other)
+
+    __radd__ = __add__
+
+    def __sub__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return atoms.sub2(self, phi_other)
+
+    def __rsub__(self, other):
+        return (self.__neg__()).__add__(other)
+
+    def __mul__(self, other):
+        """
+        since each node is thought of as a column vector,
+        right-multiplication is only supported by a scalar or 1x1 array
+        """
+        if isinstance(other, numbers.Real):
+            # perform multiply
+            return atoms.scale(other, self)
+
+        elif isinstance(other, np.ndarray):
+            # check dimensions
+            if not (other.shape == (1,)):
+                return ValueError("Dimension mismatch while multiplying on the right.")
+
+            # perform multiply
+            assert isinstance(other[0], numbers.Real)
+            return atoms.scale(other[0], self)
+
+        else:
+            raise TypeError("Invalid overload while calling %s.__mul__(%s)" % (repr(self), repr(other)))
+
+    def __rmul__(self, other):
+        """
+        since each node is thought of as a column vector,
+        left-multiplication is only supported by a scalar, 1x1 array, or a matrix of appropriate size
+        """
+        if isinstance(other, numbers.Real):
+            # perform multiply
+            return atoms.scale(other, self)
+
+        elif isinstance(other, np.ndarray) and other.shape == (1,):
+            # perform multiply
+            assert isinstance(other[0], numbers.Real)
+            return atoms.scale(other[0], self)
+
+        elif isinstance(other, np.ndarray) and other.ndim == 2:
+            # check dimensions
+            (m, n) = other.shape
+            assert m >= 1 and n >= 1
+            if not (n == self.outdim):
+                return ValueError("Dimension mismatch while multiplying on the left.")
+            return Linear(
+                other,
+                self
+            )
+
+        else:
+            raise TypeError("Invalid overload while calling %s.__rmul__(%s)" % (repr(self), repr(other)))
+
+    ##################################
+    # comparisons create a constraint
+    ##################################
+    def __lt__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.LT)
+
+    def __le__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.LE)
+
+    def __eq__(self, other):
+        """
+        WARNING: when overloading __eq__, make sure to distinguish between
+        `==` and `is` comparison. In particular, note that `in` comparison
+        uses both `==` and `is`. This means that lists of nodes should not
+        be searched using `in`.
+        """
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.EQ)
+
+    def __ne__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.NE)
+
+    def __ge__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.GE)
+
+    def __gt__(self, other):
+        assert self._is_derived_instance()
+        phi_other = atoms.vectorize_to(self, other)
+        return Constraint(self, phi_other, rel=Relation.GT)
 
 
 class Variable(Amn):
@@ -27,6 +178,9 @@ class Variable(Amn):
     def __init__(self, outdim=1, name='Variable'):
         super(Variable, self).__init__(outdim=outdim, indim=outdim)
         self.name = name
+
+    def __repr__(self):
+        return "Variable(outdim=%s, name='%s')" % (self.outdim, self.name)
 
     def __str__(self):
         return '%s(%d)' % (self.name, self.outdim)
@@ -56,6 +210,10 @@ class Affine(Amn):
         self.w = np.copy(w)
         self.x = x
         self.b = np.copy(b).flatten()
+
+    def __repr__(self):
+        return 'Affine(w=%s, x=%s, b=%s)' % \
+               (repr(self.w), repr(self.x), repr(self.b))
 
     def __str__(self):
         return 'Affine(w=%s, x=%s, b=%s)' % \
@@ -92,6 +250,10 @@ class Mu(Amn):
         self.y = y
         self.z = z
 
+    def __repr__(self):
+        return 'Mu(%s, %s, %s)' % \
+               (repr(self.x), repr(self.y), repr(self.z))
+
     def __str__(self):
         return 'Mu(%s, %s, %s)' % \
                (str(self.x), str(self.y), str(self.z))
@@ -122,12 +284,17 @@ class Stack(Amn):
     """
     def __init__(self, x, y):
         assert x.indim == y.indim
-        assert not(isinstance(x, Variable) and isinstance(y, Variable)), \
-            'stacking variables not supported'
+        # TODO: assertion commented out to allow operations like x + x,
+        #       however, we need a way to bring this back, disallowing variable stacks
+        #assert not(isinstance(x, Variable) and isinstance(y, Variable)), \
+        #    'stacking variables not supported'
         super(Stack, self).__init__(outdim=x.outdim + y.outdim, indim=x.indim)
 
         self.x = x
         self.y = y
+
+    def __repr__(self):
+        return 'Stack(%s, %s)' % (repr(self.x), repr(self.y))
 
     def __str__(self):
         return 'Stack(%s, %s)' % (str(self.x), str(self.y))
@@ -155,6 +322,9 @@ class Constant(Affine):
             b
         )
 
+    def __repr__(self):
+        return 'Constant(x=%s, b=%s)' % (repr(self.x), repr(self.b))
+
     def __str__(self):
         return 'Constant(x=%s, b=%s)' % (str(self.x), str(self.b.tolist()))
 
@@ -173,6 +343,9 @@ class Linear(Affine):
             x,
             np.zeros(w.shape[0])
         )
+
+    def __repr__(self):
+        return 'Linear(w=%s, x=%s)' % (repr(self.w), repr(self.x))
 
     def __str__(self):
         return 'Linear(w=%s, x=%s)' % (str(self.w.tolist()), str(self.x))
