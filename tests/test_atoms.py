@@ -8,6 +8,8 @@ import itertools
 from numpy.linalg import norm
 from itertools import product
 
+from scipy.spatial import ConvexHull
+
 
 class TestAtoms(unittest.TestCase):
     @classmethod
@@ -215,6 +217,24 @@ class TestAtoms(unittest.TestCase):
             self.assertTrue(r.shape == (4,))
             self.assertTrue(s.shape == (4,))
             self.assertAlmostEqual(norm(r - s), 0)
+
+    def test_convex_hull(self):
+         
+        vertices = [np.array([10,4]), np.array([10,-1]), np.array([4,-1]), np.array([4,4]),np.array([7,6])]
+        conv_set = amnet.atoms.convex_hull(vertices)
+
+        hull = ConvexHull(vertices)
+
+        xs = np.random.uniform(low=2.0, high=12.0, size=(50,))
+        ys = np.random.uniform(low=-3.0, high=8.0, size=(50,))
+        for x,y in zip(xs,ys):
+            amnet_plane_max = conv_set.eval(np.array([x,y]))
+            # extract simplex equations
+            scipy_planes = []
+            for i in range(len(hull.equations)):
+                scipy_planes.append((hull.equations[i,:-1] * [x,y]).sum() + hull.equations[i,-1])
+            scipy_plane_max = np.sign(max(scipy_planes))
+            assert(np.sign(scipy_plane_max) == np.sign(amnet_plane_max))
 
 
 
