@@ -456,6 +456,56 @@ def relu_net(W, x, B):
     return prev_layer
 
 
+def convex_hull(vertices):
+    """ 
+    AMN that returns y <= 0 iff x is within the convex hull of the vertices;
+    only works for 2 dimensions 
+    """
+
+    # only works for dimension 2
+    for vertex in vertices:
+        assert(len(vertex)==2) 
+
+    x = amnet.amn.Variable(2, name="x")
+
+    # point within the convex hull
+    center = .333*vertices[0] + .333*vertices[1] + .333*vertices[2]
+
+    # translation to origin
+    T = lambda x: x - center
+
+    # distance below polytope
+    delta = -1
+
+    planes = []
+    for i in range(len(vertices)):
+        x_i = T(vertices[i])
+        if i >= len(vertices) - 1:
+            x_j = T(vertices[0]) # wrap around
+        else:
+            x_j = T(vertices[i+1])
+
+        A = float(delta*(x_j[1] - x_i[1]))
+        B = float(delta*(x_i[0] - x_j[0]))
+        C = float(x_i[0]*x_j[1] - x_j[0]*x_i[1])
+        D = float(delta*(x_i[0]*x_j[1] - x_j[0]*x_i[1]))
+
+        # r = (-A/C)*x + (-B/C)*y + D/C
+
+        w = np.array([[(-A/C), (-B/C)]])
+        b = np.array([D/C])
+
+        # amnet conversion of translation
+        T_amnet = amnet.amn.Affine(np.identity(2), x, -center)
+
+        # amnet plane
+        plane = amnet.amn.Affine(w, T_amnet, b)
+        planes.append(plane)
+    
+    return amnet.atoms.max_list(planes)
+
+
+
 def pos_part(phi):
     """
     synonym for relu, i.e.,
