@@ -291,6 +291,8 @@ class Problem(object):
             result_z3 = self.solver.check()
             if result_z3 == z3.unsat:
                 result.status = OptResultCode.INFEASIBLE
+                if self.options.verbosity >= 2:
+                    print "Problem Infeasible"
                 return result
 
         iter_ctr = 0
