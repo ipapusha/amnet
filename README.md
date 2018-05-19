@@ -30,4 +30,4 @@ print phimax.eval([1, -2]) # returns: 1
 ```
 
 ## References
-* Forthcoming...
+* I. Papusha, U. Topcu, S. Carr, N. Lauffer. "Affine Multiplexing Networks: System Analysis, Learning, and Computation," [arXiv:1805.00164](https://arxiv.org/abs/1805.00164) \[math.OC\], 2018.
