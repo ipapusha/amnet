@@ -455,6 +455,45 @@ def relu_net(W, x, B):
 
     return prev_layer
 
+def sat_net(W,x,B):
+    # Saturated output based on a relu neural net - use instead of Sigmoid
+    assert len(W)==len(B)
+    assert x.outdim==W[0].T.shape[1]
+
+    # one-dimensional zero for all layers
+    zero1 = zero_from(x,dim=1)
+    assert zero1.outdim==1
+
+    prev_layer = x
+    for i in range(len(W)):
+        w = W[i].T
+        b = B[i]
+
+        assert w.ndim ==2
+        assert prev_layer.outdim == w.shape[1]
+        assert len(b) == w.shape[0]
+
+        # Saturation with limits of 0 to 1
+        outlist =[]
+        for j in range(w.shape[0]):
+            xi = amnet.Affine(np.array([w[j]]), prev_layer, [b[j]])
+            # In this case we want a sigmoid on the output so have relu's in the middle and a saturation of 0 and 1 on the output
+            if i == len(W) - 1:
+                outlist.append(sat(xi, lo=int(0), hi=int(1)))
+            else:
+                # relu node
+                outlist.append(amnet.Mu(
+                   zero1,
+                 xi,
+                 xi
+              ))
+
+        # Stack nodes
+        prev_layer = from_list(outlist)
+        assert prev_layer.outdim == w.shape[0]
+
+    return prev_layer
+
 
 def convex_hull(vertices):
     """ 
